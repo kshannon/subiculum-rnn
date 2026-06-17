@@ -69,7 +69,14 @@ figures/*
 !figures/.gitkeep
 
 # ============ Editors ============
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.swp
+tempCodeRunnerFile.py
 .idea/
 *.swp
 tempCodeRunnerFile.py
