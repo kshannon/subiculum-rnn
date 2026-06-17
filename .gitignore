@@ -51,9 +51,10 @@ multirun/
 *.ckpt
 checkpoints/
 
-# ============ Raw Data ============
-data/*
-!data/.gitkeep
+# ============ Data ============
+data/**
+!data/**/
+!data/**/.gitkeep
 *.nwb
 *.npy
 *.npz
@@ -63,10 +64,12 @@ data/*
 .dandi/
 
 # ============ Figures & Results ============
-results/*
-!results/.gitkeep
-figures/*
-!figures/.gitkeep
+results/**
+!results/**/
+!results/**/.gitkeep
+figures/**
+!figures/**/
+!figures/**/.gitkeep
 
 # ============ Editors ============
 .vscode/*
