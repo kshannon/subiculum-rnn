@@ -516,6 +516,8 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/ac/66/93359047a9c7ede7c6319f58b2cee3be19552f57ef5380fe95cb812272fb/neo-0.14.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/14/4ef27c25bd0184e37d5cd4a62dc312e118a99ab425ee851df9908ed47eb6/pynapple-0.11.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/1f/9751abbc14422092754423d41c89b0884dba3abc236125adc427d108216a/quantities-0.16.4-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a8/9c/5e49f71504351107bd38eee99cc39db4b81b63f3d4f5b04af49555b3fd88/ratinabox-1.15.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b9/37/e781683abac55dde9771e086b790e554811a71ed0b2b8a1e789b7430dd44/shapely-2.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
   default:
     channels:
@@ -1006,6 +1008,8 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/ac/66/93359047a9c7ede7c6319f58b2cee3be19552f57ef5380fe95cb812272fb/neo-0.14.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/14/4ef27c25bd0184e37d5cd4a62dc312e118a99ab425ee851df9908ed47eb6/pynapple-0.11.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/1f/9751abbc14422092754423d41c89b0884dba3abc236125adc427d108216a/quantities-0.16.4-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a8/9c/5e49f71504351107bd38eee99cc39db4b81b63f3d4f5b04af49555b3fd88/ratinabox-1.15.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b9/37/e781683abac55dde9771e086b790e554811a71ed0b2b8a1e789b7430dd44/shapely-2.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -1440,6 +1444,8 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/ac/66/93359047a9c7ede7c6319f58b2cee3be19552f57ef5380fe95cb812272fb/neo-0.14.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/14/4ef27c25bd0184e37d5cd4a62dc312e118a99ab425ee851df9908ed47eb6/pynapple-0.11.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cd/1f/9751abbc14422092754423d41c89b0884dba3abc236125adc427d108216a/quantities-0.16.4-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a8/9c/5e49f71504351107bd38eee99cc39db4b81b63f3d4f5b04af49555b3fd88/ratinabox-1.15.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/86/07/59dee0bc4b913b7ab59ab1086225baca5b8f19865e6101db9ebb7243e132/shapely-2.1.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -10619,6 +10625,19 @@ packages:
   - sphinx ; extra == 'doc'
   - scipy ; extra == 'scipy'
   requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/a8/9c/5e49f71504351107bd38eee99cc39db4b81b63f3d4f5b04af49555b3fd88/ratinabox-1.15.3-py3-none-any.whl
+  name: ratinabox
+  version: 1.15.3
+  sha256: 5aca9cff82d0391a5f0022d7e3e39a3f610e4b4f6d98b2d347b29b3fbd3cfea4
+  requires_dist:
+  - numpy
+  - matplotlib
+  - scipy
+  - shapely
+  - pettingzoo>=1.23.0 ; extra == 'gymnasium'
+  - pytest ; extra == 'test'
+  - scikit-learn ; extra == 'test'
+  requires_python: '>=3.7'
 - conda: https://conda.anaconda.org/conda-forge/linux-64/rav1e-0.8.1-h1fbca29_0.conda
   sha256: cf550bbc8e5ebedb6dba9ccaead3e07bd1cb86b183644a4c853e06e4b3ad5ac7
   md5: d83958768626b3c8471ce032e28afcd3
@@ -11019,6 +11038,36 @@ packages:
   - pkg:pypi/setuptools?source=hash-mapping
   size: 676888
   timestamp: 1770456470072
+- pypi: https://files.pythonhosted.org/packages/86/07/59dee0bc4b913b7ab59ab1086225baca5b8f19865e6101db9ebb7243e132/shapely-2.1.2-cp312-cp312-macosx_11_0_arm64.whl
+  name: shapely
+  version: 2.1.2
+  sha256: ba4d1333cc0bc94381d6d4308d2e4e008e0bd128bdcff5573199742ee3634359
+  requires_dist:
+  - numpy>=1.21
+  - pytest ; extra == 'test'
+  - pytest-cov ; extra == 'test'
+  - scipy-doctest ; extra == 'test'
+  - numpydoc==1.1.* ; extra == 'docs'
+  - matplotlib ; extra == 'docs'
+  - sphinx ; extra == 'docs'
+  - sphinx-book-theme ; extra == 'docs'
+  - sphinx-remove-toctrees ; extra == 'docs'
+  requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/b9/37/e781683abac55dde9771e086b790e554811a71ed0b2b8a1e789b7430dd44/shapely-2.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+  name: shapely
+  version: 2.1.2
+  sha256: 1e7d4d7ad262a48bb44277ca12c7c78cb1b0f56b32c10734ec9a1d30c0b0c54b
+  requires_dist:
+  - numpy>=1.21
+  - pytest ; extra == 'test'
+  - pytest-cov ; extra == 'test'
+  - scipy-doctest ; extra == 'test'
+  - numpydoc==1.1.* ; extra == 'docs'
+  - matplotlib ; extra == 'docs'
+  - sphinx ; extra == 'docs'
+  - sphinx-book-theme ; extra == 'docs'
+  - sphinx-remove-toctrees ; extra == 'docs'
+  requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/sigtool-codesign-0.1.3-h98dc951_0.conda
   sha256: f3d006e2441f110160a684744d90921bbedbffa247d7599d7e76b5cd048116dc
   md5: ade77ad7513177297b1d75e351e136ce
