@@ -104,3 +104,6 @@ Icon?
 .directory
 .Trash-*
 .nfs*
+
+# ============ Misc and Outputs ============
+tmp/
