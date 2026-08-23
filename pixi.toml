@@ -8,6 +8,9 @@ version   = "0.1.0"
 
 ###################### ======== TASKS ======== ######################
 [tasks]
+# Lab notebook
+note = "zsh scripts/new_labnote.sh"
+
 # Data pipeline
 data-synthetic = "python -m src.data.synthetic --config configs/data/synthetic.yaml"
 
@@ -44,9 +47,12 @@ seaborn    = ">=0.13"
 pymc = ">=5.10.0"
 arviz = "=1.1.0"
 nutpie = ">=0.15.0"
+pydantic = ">=2.5"
+pyyaml = ">=6"
 
 [pypi-dependencies]
 pynapple = ">=0.4"
+ratinabox = ">=1"
 
 ###################### ======== DEV / CUDA FEATURES ======== ######################
 [feature.dev.dependencies]
