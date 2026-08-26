@@ -1,6 +1,6 @@
 # subiculum-rnn
 
-A recurrent neural network trained to predict future position and head direction from inputs to subiculum (e.g. ADn, CA1, RSC). The latent space is examined for emergent axis-of-travel and spatial-analogy representations.
+A recurrent neural network trained to predict future position and head direction from inputs to subiculum (e.g. ADn, CA1, RSC). The latent space is examined for emergent axis-of-travel and spatial-analogy representations. Synthetic data generated with the RatInABox python library<sup>3</sup>.
 
 ## Quick start
 
@@ -36,6 +36,9 @@ To that end, this README provides all instructions needed to reproduce our synth
 | **Logged and versioned training runs** | Hydra configs are saved with each run and WandB logs every metric |
 | **Cross-platform** | `pixi.toml` targets `linux-64`, `osx-arm64` |
 
+## Pixi task command samples
+`pixi run env-plot triple_t --out figures/env.png && open figures/env.png`
+
 
 ## Citation
 
@@ -47,3 +50,4 @@ If you use this code, please cite the relevant papers (see project wiki for full
 
 1. National Academies of Sciences, Engineering, and Medicine. 2019. Reproducibility and Replicability in Science. Washington, DC: The National Academies Press. https://doi.org/10.17226/25303.
 2. https://www.acm.org/publications/policies/artifact-review-and-badging-current
+3. Tom M George, Mehul Rastogi, William de Cothi, Claudia Clopath, Kimberly Stachenfeld, Caswell Barry. "RatInABox, a toolkit for modelling locomotion and neuronal activity in continuous environments" (2024), eLife, https://doi.org/10.7554/eLife.85274 .
