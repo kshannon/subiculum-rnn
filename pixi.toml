@@ -11,6 +11,9 @@ version   = "0.1.0"
 # Lab notebook
 note = "zsh scripts/new_labnote.sh"
 
+# Env plots
+env-plot = "python scripts/plot_envs.py"
+
 # Data pipeline
 data-synthetic = "python -m src.data.synthetic --config configs/data/synthetic.yaml"
 
@@ -22,6 +25,7 @@ train-debug = "python -m src.train --config-dir configs --config-name debug"
 
 # Testing
 test = "pytest tests/ -v --cov=src --cov-report=term-missing"
+sim-smoke = "python scripts/smoke_agent.py"
 
 
 ###################### ======== DEPENDENCIES ======== ######################
