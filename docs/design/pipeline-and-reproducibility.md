@@ -3,7 +3,7 @@ title: RNN pipeline, reproducibility, and stopping criteria
 date: 2026-09-10
 created: 2026-09-10T17:05:00-0700
 status: design — pre-implementation
-tags: [design, pipeline, reproducibility, stopping, latent-space]
+tags: [design, pipeline, data-generation, reproducibility, stopping, latent-space]
 ---
 
 # RNN pipeline, reproducibility, and stopping criteria
@@ -20,7 +20,14 @@ document stays the record of what was decided and why.
    artifact ID)*, so any number in a figure traces back to exact inputs. This maps
    onto the `data-synthetic` / `train` / `test` tasks already declared in
    `pixi.toml`.
-2. **Reproducibility.** Every run is a self-describing directory: a manifest (git
+2. **Synthetic data.** The network trains only on synthetic data. The lab's
+   recordings fit a behavioral generator (track geometry, junction policy,
+   kinematics, and an explicit head-direction process — RatInABox's default HD
+   equals travel direction, which would make axis of travel a trivial function
+   of the ADn input) and serve as the held-out comparison target. Primary
+   generator: route graph + RatInABox drift steering; never "one trajectory plus
+   noise".
+3. **Reproducibility.** Every run is a self-describing directory: a manifest (git
    SHA, lock-file hash, resolved config, dataset content hash, hardware, seeds), the
    *initial* weights, dense checkpoints carrying optimizer/scheduler/RNG state,
    local metric logs (Weights & Biases mirrors them, never replaces them), and
@@ -28,14 +35,14 @@ document stays the record of what was decided and why.
    streams (data, init, shuffling). Bitwise reproducibility is claimed only within
    a (hardware, lock file) pair; the *scientific* claim is statistical
    replicability across seeds.
-3. **Stopping.** Decouple *when to stop spending compute* from *which checkpoint to
+4. **Stopping.** Decouple *when to stop spending compute* from *which checkpoint to
    analyze*. Compute stops at a fixed step budget, identical across seeds and
    conditions, calibrated from pilots (roughly 3× the time-to-plateau of the
    validation task error). Checkpoints are selected post hoc by a pre-registered,
    task-side rule. Axis-of-travel and spatial-analogy metrics are **monitored at
    every checkpoint but never used for stopping or selection** — otherwise the
    emergence claim becomes an artifact of the procedure.
-4. **Latent-space readiness.** A versioned probe battery that dissociates axis of
+5. **Latent-space readiness.** A versioned probe battery that dissociates axis of
    travel from location and from direction; checkpoint 0 as the null model;
    per-checkpoint hidden-state dumps as labeled arrays; cross-seed geometry
    comparison under identical budgets.
@@ -69,7 +76,7 @@ hidden state is then interrogated for axis-of-travel tuning (Olson, Tongpraseart
 | Replicable | different seeds, data draws, or machines | the effect (fraction of axis-tuned units, decoding accuracy, geometry similarity, …) falls within a stated tolerance across N runs |
 
 A single-seed result is an anecdote. Multi-seed runs are the unit of evidence, and
-everything in sections 3–4 is designed so that multi-seed comparisons are not
+everything in sections 4–5 is designed so that multi-seed comparisons are not
 confounded by the training procedure itself.
 
 ---
@@ -81,7 +88,7 @@ confounded by the training procedure itself.
 | 1. Data generation / ingestion | RatInABox config, or DANDI asset, or own recording | zarr store + `dataset.yaml` | `data/` | `dataset_id` = content hash |
 | 2. Dataset assembly | dataset + split spec | windowed sequences, split manifest, normalization stats | `data/` | split manifest hash |
 | 3. Model | architecture config | instantiated network | `model/` | config hash + git SHA |
-| 4. Training | dataset + model + training config | run directory (§3) | `training/` | `run_id` |
+| 4. Training | dataset + model + training config | run directory (§4) | `training/` | `run_id` |
 | 5. Evaluation / analysis | run directory + probe battery | `eval/`, `analysis/` outputs | `analysis/` | run_id + battery ID + analysis config hash |
 
 Composed by Hydra; the composed config is validated by a pydantic model before
@@ -97,7 +104,8 @@ typos at second zero instead of hour three.
   xarray-labeled dims `(time, channel)`, per-channel metadata (region, tuning
   parameters), and a `dataset.yaml` holding every generation parameter, the
   RatInABox version, the seed, the environment specification, and the content hash
-  that becomes the `dataset_id`.
+  that becomes the `dataset_id`. Trajectory generation, the head-direction
+  process, and the fidelity report are specified in §3.
 - **Open data.** DANDI dandiset ID + version + asset checksums; loaded via
   pynapple; preprocessing parameters (bin width, smoothing kernel, speed threshold)
   versioned in the same `dataset.yaml` shape.
@@ -142,7 +150,7 @@ typos at second zero instead of hour three.
   (1 − cos of the angular error, or a von Mises negative log-likelihood). **Both
   components are logged separately** — they converge at different rates.
 - Optimizer and schedule from config. For science runs: cosine decay to zero over
-  a fixed budget (§4), so "final checkpoint" is well-defined and comparable.
+  a fixed budget (§5), so "final checkpoint" is well-defined and comparable.
 - Checkpoint cadence: log-spaced early (steps 0, 1, 2, 4, 8, …) then every N steps.
   Early representational change is fast; the log spacing is what makes emergence
   timelines legible.
@@ -150,7 +158,7 @@ typos at second zero instead of hour three.
 ### 2.5 Evaluation and analysis
 
 - **Open-loop error** at horizon Δ (teacher-forced) — the standard metric, but a
-  weak one (§4.1).
+  weak one (§5.1).
 - **Multi-horizon evaluation** (predict 1, 5, 10, 20, … bins ahead with the
   open-loop model, or with a multi-horizon readout) — the primary discriminating
   task-side metric, available for every data kind.
@@ -159,17 +167,165 @@ typos at second zero instead of hour three.
   raw position, closed-loop rollout requires *regenerating* input activity from the
   predicted state through the known synthetic tuning curves. This is possible for
   synthetic data only; treat it as a synthetic-only diagnostic and say so.
-- **Probe battery and latent-space battery** (§5), run at every dumped checkpoint.
+- **Probe battery and latent-space battery** (§6), run at every dumped checkpoint.
 
 ---
 
-## 3. Run artifacts and reproducibility
+## 3. Synthetic data generation
 
-### 3.1 Run directory layout
+The network trains on synthetic data only. The lab's recordings — the dataset in
+which axis-of-travel tuning was found — are never used for training; they are used
+to *fit the behavioral generator* and, at the end, as the comparison target
+(§3.8). The RatInABox mechanics below were verified against version 1.15.3.
+
+### 3.1 Role of the real data
+
+Two uses, neither of which is training:
+
+1. **Fit a generative model of behavior**: the track geometry, what the animal does
+   at junctions, how it runs within a segment, and how its head moves relative to
+   its path. Fitting to tracking data is legitimate and leaks nothing — the model
+   never sees a subiculum spike.
+2. **Comparison target at evaluation** (§3.8), pre-registered.
+
+**Not** "one real trajectory plus noise." Jittering a trajectory creates no new
+behavior — the same route choices, junction sequence and speed profile, wobbled —
+so the network sees one sample dressed up as thousands and memorizes the sequence.
+
+**Data-level selection guard.** The generator is fit to pre-specified behavioral
+statistics (§3.6) and frozen *before* any model latent is examined. Tuning the
+synthetic data until axis tuning appears would re-create, one level down, the
+selection problem that §5.5 forbids at the stopping rule.
+
+### 3.2 The head-direction confound
+
+In RatInABox, head direction is the normalized, smoothed velocity
+(`Agent.head_direction_smoothing_timescale`, default 0.15 s). Out of the box,
+**HD ≡ direction of travel**, so axis of travel is HD modulo 180° — a fixed
+nonlinearity of the ADn input. Any "axis tuning" that emerged under those
+conditions would be uninteresting: a unit reading the HD ring with a double-angle
+weighting gets it for free. Axis-of-travel cells are a *finding* in the real
+subiculum because HD and path direction are correlated but decoupled in a rat
+(head scanning at junctions and pauses, looking sideways while running).
+
+Requirements:
+
+- An explicit HD process, fit from the real tracking (two-LED head direction if
+  available): the distribution of HD − heading as a function of speed, plus scan
+  events at low speed.
+- Mechanically: override `Agent.head_direction` each step (or pass
+  `head_direction=` to the cell classes' `get_state`) so HD cells and egocentric
+  cells are driven by this process rather than by RatInABox's smoothed velocity.
+- The HD − heading deviation distribution is a fidelity metric in its own right
+  (§3.6). A dataset whose HD equals heading is a *control condition*, run and
+  labeled as such, never the default.
+
+### 3.3 Structural requirements of the environment
+
+On a track, axis of travel is confounded with position within a segment. The real
+experiment can dissociate them only because the track contains same-orientation
+segments at different locations (and, where present, crossings). The synthetic
+environments must contain the same dissociations, or the network has no pressure
+to represent axis separately from place and no analysis could detect it if it
+did:
+
+- repeated orientations at different locations;
+- crossings where the real track has them;
+- both directions of travel on every segment (otherwise axis = direction).
+
+**Family, not one geometry.** Train on a procedurally generated family of track
+layouts sharing these properties, with the real geometry as one member and one
+layout held out for the spatial-analogy test (§2.2). Emergent axis coding is then
+a general strategy rather than a maze idiosyncrasy. An **open-field** dataset is a
+control condition: does axis coding require track structure at all?
+
+**Input remapping policy** across environments is a recorded design decision:
+RatInABox place cells are defined by centres within an environment, so new centres
+per environment is global remapping and shared centres is none; HD cells are
+allocentric and stable regardless.
+
+### 3.4 Trajectory generators
+
+| Tier | Mechanism | Strengths | Limits | Use |
+|---|---|---|---|---|
+| 1. Imported real trajectories | `Agent.import_trajectory(times, positions)`, cubic-spline interpolated | exact real kinematics | finite pool; imported paths can clip walls (RatInABox warns), which matters for geodesic place fields | **evaluation** (§3.8); at most a small matched set |
+| 2. Native random motion | Ornstein–Uhlenbeck speed and heading; defaults fit to open-field foraging | unlimited; one line | in a corridor it wanders and reverses, never runs routes | **open-field controls** only |
+| 3. Route graph + drift steering | see below | unlimited; genuinely new behavioral samples; walls respected by construction | requires fitting a junction policy and kinematics | **primary training generator** |
+| 4. Block bootstrap of real traversals | resample segment traversals, stitch in graph-consistent order, time-warp, jitter within the corridor, import | real kinematics preserved | diversity limited to traversal-order combinatorics | **validation arm** for tier 3 |
+
+**Tier 3 in detail.** Represent the track as a graph of segments and junctions.
+Fit a junction policy from the real data (a first- or second-order transition
+matrix captures turn biases and alternation). Sample route sequences, lay
+waypoints along each segment, and drive the agent with
+`Agent.update(drift_velocity=<toward next waypoint>, drift_to_random_strength_ratio=r)`.
+Per-segment control of the OU parameters (`speed_mean`, `speed_std`,
+`speed_coherence_time`, `rotational_velocity_std`, …) gives slowing into turns and
+pauses at reward sites (drift toward zero velocity). The result is goal-directed
+running with realistic stochasticity; every trajectory is a new sample and every
+session is one seed. If models trained on tiers 3 and 4 disagree, the parametric
+generator is missing something the fidelity report should have caught.
+
+### 3.5 Input populations
+
+| Region | RatInABox class | Key parameters | Notes |
+|---|---|---|---|
+| ADn | `HeadDirectionCells` | `n`, `angular_spread_degrees` | driven by the custom HD process (§3.2) |
+| CA1 | `PlaceCells` | `n`, `widths`, `wall_geometry="geodesic"` (default) | geodesic fields do not bleed across track walls |
+| RSC | `BoundaryVectorCells(reference_frame="egocentric")`, optionally `FieldOfViewBVCs` and HD-conjunctive units | `n`, tuning distance / angle distributions | composition is a config decision, recorded per dataset |
+
+Every class accepts `noise_std` and `noise_coherence_time`; rate noise is the
+default, Poisson spike counts a later robustness condition. Simulate at the
+default `dt = 0.05 s` (RatInABox warns if `dt` exceeds the HD smoothing timescale)
+and bin from there.
+
+### 3.6 Fidelity report
+
+Ships with every `dataset.yaml` (§4.5). Synthetic vs real, pre-specified:
+
+- occupancy map;
+- speed distribution, and speed as a function of track position;
+- heading distribution (peaked at segment orientations, both directions) and
+  angular-velocity distribution;
+- run / pause bout durations;
+- junction transition statistics;
+- velocity autocorrelation;
+- HD − heading deviation distribution (§3.2).
+
+Tolerances are written down before the generator is fit; the generator is frozen
+once they are met (§3.1).
+
+### 3.7 Scale and storage
+
+Arithmetic first: 2,000 sessions × 20 min × 20 Hz ≈ 48 M steps; with ~300 input
+channels in float16 ≈ 30 GB. RatInABox steps a Python loop — low thousands of steps
+per second with cells attached — so several core-hours, trivially parallelized
+across sessions with one seed per session.
+
+Store an immutable canonical set, hashed as in §4.5. If more is ever needed,
+generate on the fly with the (generator config, seed, RatInABox version) triple as
+the dataset identity, plus a determinism check: regenerating session 0 must
+reproduce its stored hash. RatInABox also bundles real open-field trajectories
+(Sargolini et al. 2006, 600 s; Tanni et al. 2022, ~2 h) — free behavior for the
+open-field control.
+
+### 3.8 Evaluation against the real recordings
+
+Only at evaluation, and pre-registered: import the recorded trajectories (tier 1),
+generate inputs from them with the same cell models, run the frozen model, and
+score its units with the identical axis-tuning analysis used on the real neurons
+(§6.4). Compare the distributions (fraction axis-tuned, tuning strength) and the
+population geometry (RSA between model hidden states and real population vectors
+over matched behavioral bins). The model never trains on the recordings.
+
+---
+
+## 4. Run artifacts and reproducibility
+
+### 4.1 Run directory layout
 
 ```
 runs/2026-09-12_143201_a3f9c1/
-├── manifest.yaml           # the one file that makes the run reconstructible (§3.2)
+├── manifest.yaml           # the one file that makes the run reconstructible (§4.2)
 ├── config.yaml             # fully-resolved Hydra config + the CLI overrides used
 ├── checkpoints/
 │   ├── step_0000000.pt     # the init — saved, always; it is the null model
@@ -182,7 +338,7 @@ runs/2026-09-12_143201_a3f9c1/
 └── analysis/               # outputs of the latent-space battery, per checkpoint
 ```
 
-### 3.2 Manifest fields
+### 4.2 Manifest fields
 
 Validated by a pydantic model; the same model is used to *load* runs for analysis,
 so schema drift is caught rather than silently tolerated.
@@ -199,10 +355,10 @@ so schema drift is caught rather than silently tolerated.
   ID.
 - **Config:** hash of the resolved config, plus the overrides.
 - **Seeds:** `data_seed`, `init_seed`, `shuffle_seed` (and any augmentation seed).
-- **Determinism:** the flags actually in effect (§3.4).
+- **Determinism:** the flags actually in effect (§4.4).
 - **Status:** running / finished / aborted (with reason), step count, wall time.
 
-### 3.3 Seed policy: three independent streams
+### 4.3 Seed policy: three independent streams
 
 Separate seeds for (a) data generation, (b) weight initialization, and (c)
 dataloader shuffling / augmentation. Scientifically, "same dataset, 20 inits" and
@@ -210,7 +366,7 @@ dataloader shuffling / augmentation. Scientifically, "same dataset, 20 inits" an
 entangles them. Each stream gets its own `torch.Generator` / NumPy `Generator`;
 nothing draws from a global RNG inside the training loop.
 
-### 3.4 Determinism settings
+### 4.4 Determinism settings
 
 - `torch.use_deterministic_algorithms(True)`, `torch.backends.cudnn.deterministic =
   True`, `cudnn.benchmark = False`, `CUBLAS_WORKSPACE_CONFIG=:4096:8`.
@@ -224,7 +380,7 @@ nothing draws from a global RNG inside the training loop.
   so bitwise agreement is only expected within a (hardware, lock) pair. Across
   machines, the claim is replicability to a stated tolerance.
 
-### 3.5 Data provenance
+### 4.5 Data provenance
 
 - `dataset_id` is a short content hash of the zarr store. Training verifies the
   on-disk hash against the manifest of the dataset it was pointed at and refuses to
@@ -233,7 +389,7 @@ nothing draws from a global RNG inside the training loop.
   `dataset.yaml` lives alongside the store and is committed to git (it is small);
   the store itself is not.
 
-### 3.6 Storage habits
+### 4.6 Storage habits
 
 - **Save `state_dict` + config, never pickled modules.** A pickled module breaks the
   moment the class moves; a state dict plus the config that rebuilds the
@@ -255,21 +411,21 @@ nothing draws from a global RNG inside the training loop.
   synced to external storage — DVC if a managed remote is wanted; at these sizes
   even git-lfs would work for checkpoints.
 
-### 3.7 Multi-seed protocol
+### 4.7 Multi-seed protocol
 
 - Pilot: 5 init seeds per condition. Science: ≥ 10 (20 if the geometry claims
   turn out to be subtle).
 - **Identical step budgets across all seeds and conditions in any comparison**
-  (§4.2). This is what makes cross-seed geometry differences attributable to seeds
+  (§5.2). This is what makes cross-seed geometry differences attributable to seeds
   rather than to training duration.
 - Report distributions, not the best seed. Hierarchical estimates (seed within
   condition) via the PyMC / ArviZ stack already in the environment.
 
 ---
 
-## 4. Stopping criterion
+## 5. Stopping criterion
 
-### 4.1 Why validation-loss early stopping is the wrong primary rule
+### 5.1 Why validation-loss early stopping is the wrong primary rule
 
 - **One-step teacher-forced loss is a weak, fast-saturating signal.** Rat
   trajectories are smooth, so "position(t+1) ≈ position(t) + a bit of velocity"
@@ -288,7 +444,7 @@ nothing draws from a global RNG inside the training loop.
   steps and seed B at 60 k, any cross-seed geometry difference is confounded with
   training duration, and the replicability claim evaporates.
 
-### 4.2 The rule: fixed budget, identical across runs
+### 5.2 The rule: fixed budget, identical across runs
 
 1. **Pilot.** 3–5 seeds per condition, generous budget (e.g. 200 k steps).
    Define the plateau step as the first step after which relative improvement in
@@ -305,7 +461,7 @@ nothing draws from a global RNG inside the training loop.
    abort as a failed run. Aborted runs are kept with `status: aborted`, never
    deleted — they are data about the training landscape.
 
-### 4.3 Checkpoint selection, pre-registered
+### 5.3 Checkpoint selection, pre-registered
 
 The rule is written in the analysis config *before* looking at any latent-space
 result. Candidate rules, in order of simplicity:
@@ -319,7 +475,7 @@ result. Candidate rules, in order of simplicity:
 Primary analyses are reported at *early / plateau / final* checkpoints so
 robustness to the choice is visible rather than asserted.
 
-### 4.4 Convergence certificate
+### 5.4 Convergence certificate
 
 Reported per run at the end of training:
 
@@ -335,18 +491,18 @@ If either criterion fails, the run is flagged *unsettled*. The remedy is to exte
 the budget **for the whole condition** and re-run, not to extend that one run — so
 identical budgets are preserved.
 
-### 4.5 The inviolable rule
+### 5.5 The inviolable rule
 
 > **Never use axis-of-travel or spatial-analogy metrics as a stopping or selection
 > criterion.** If training stops, or a checkpoint is chosen, when axis tuning
 > looks strongest, "axis coding emerges in the trained network" stops being a
 > finding and becomes an artifact of the procedure. Compute these metrics at every
 > dumped checkpoint, log them, plot their emergence timelines — *monitor, never
-> optimize or select on them.* Selection uses only task-side signals (§4.3) or
-> property-neutral convergence (§4.4). The emergence timeline relative to the loss
+> optimize or select on them.* Selection uses only task-side signals (§5.3) or
+> property-neutral convergence (§5.4). The emergence timeline relative to the loss
 > plateau is then itself a result, not a contamination.
 
-### 4.6 What gets logged during training
+### 5.6 What gets logged during training
 
 | Kind | Signal | Used for stopping / selection? |
 |---|---|---|
@@ -361,9 +517,9 @@ identical budgets are preserved.
 
 ---
 
-## 5. Latent-space readiness
+## 6. Latent-space readiness
 
-### 5.1 Frozen probe battery
+### 6.1 Frozen probe battery
 
 A versioned dataset with its own ID, run through the network at every dumped
 checkpoint for every seed. Designed to *dissociate* variables that natural foraging
@@ -382,20 +538,20 @@ Each probe trial carries coordinates for position, head direction, travel axis
 (direction mod 180°), speed, environment, and trial type, so every analysis can
 condition on them directly from the labeled array.
 
-### 5.2 Checkpoint 0 as the null model
+### 6.2 Checkpoint 0 as the null model
 
 Random RNNs already show nontrivial tuning. Every emergence claim is "relative to
 init", so the initial weights are a control condition, not optional metadata.
 Shuffle controls (permuted labels, time-shifted labels) complement it.
 
-### 5.3 Hidden-state dumps
+### 6.3 Hidden-state dumps
 
 xarray with dims `(trial, time, unit)` and the coordinates above, stored per
 dumped checkpoint in zarr as float16. This is the single most valuable artifact
 for post-training analysis: "watch the axis subspace emerge over training" becomes
 an offline notebook analysis rather than a retrain.
 
-### 5.4 Analysis battery
+### 6.4 Analysis battery
 
 - **Unit-level axis tuning.** Regress each unit's activity on
   (cos θ, sin θ, cos 2θ, sin 2θ) plus position covariates. Axis tuning is
@@ -414,11 +570,11 @@ an offline notebook analysis rather than a retrain.
   between seeds, and dynamics-level comparison (Maheswaranathan et al., 2019).
   Units will not replicate across seeds; if the geometry does, that is a
   representation-level replicability claim in the README's sense — valid only
-  under identical budgets (§3.7, §4.2).
+  under identical budgets (§4.7, §5.2).
 - **Developmental.** All of the above as a function of checkpoint, producing
   emergence timelines aligned to the plateau step.
 
-### 5.5 Controls and ablations
+### 6.5 Controls and ablations
 
 Untrained network; shuffled labels; input ablations (train without ADn / CA1 /
 RSC); horizon Δ sweep; regularizer sweep (noise, L2) since these are known to
@@ -426,7 +582,7 @@ shape emergent tuning; cell-type comparison (tanh RNN vs GRU).
 
 ---
 
-## 6. Open decisions before implementation
+## 7. Open decisions before implementation
 
 | Decision | Proposed default | Notes |
 |---|---|---|
@@ -436,15 +592,20 @@ shape emergent tuning; cell-type comparison (tanh RNN vs GRU).
 | Probe battery composition | sets A–E above | freeze before science runs |
 | Budget calibration | 5-seed pilot, c = 3 × plateau step | record ε, W, and the plateau step per condition |
 | Seeds per condition | 5 pilot, ≥ 10 science | |
-| Hidden-state dumps | float16, log-spaced checkpoints, designated seeds | budget per §3.6 |
+| Hidden-state dumps | float16, log-spaced checkpoints, designated seeds | budget per §4.6 |
 | Storage sync target | DVC remote vs external drive vs git-lfs | decide once run sizes are real |
 | Dirty-tree policy | science runs refuse to start on a dirty tree | debug runs may override |
 | Closed-loop rollouts | synthetic only, via regenerated inputs | state the limitation in figures |
 | Checkpoint selection rule | final checkpoint (rule 1) | pre-register in analysis config |
+| Real head direction | fit HD − heading model from two-LED tracking | parametric scan model if HD was not tracked (§3.2) |
+| Track family | crossings if the real track has them; parallel segments otherwise | shapes the procedural generator (§3.3) |
+| Block-bootstrap validation arm | yes, one comparison against tier 3 | catches generator misfit (§3.4) |
+| Input remapping across environments | new place-cell centres per environment | record per dataset (§3.3) |
+| Canonical stored set vs on-the-fly | stored and hashed; on-the-fly only with the determinism check | §3.7 |
 
 ---
 
-## 7. References (starting points)
+## 8. References (starting points)
 
 - Olson JM, Tongprasearth K, Nitz DA (2017). Subiculum neurons map the current
   axis of travel. *Nature Neuroscience* 20:170–172.
@@ -482,3 +643,9 @@ shape emergent tuning; cell-type comparison (tanh RNN vs GRU).
   https://pytorch.org/docs/stable/notes/randomness.html
 - National Academies of Sciences, Engineering, and Medicine (2019).
   *Reproducibility and Replicability in Science.* https://doi.org/10.17226/25303
+- Sargolini F et al. (2006). Conjunctive representation of position, direction,
+  and velocity in entorhinal cortex. *Science* 312:758–762. (Source of RatInABox's
+  default motion parameters and bundled open-field trajectory.)
+- Tanni S, de Cothi W, Barry C (2022). State transitions in the statistically
+  stable place cell population are determined by rate of perceptual change.
+  *Current Biology* 32. (Bundled open-field trajectory, ~2 h.)
