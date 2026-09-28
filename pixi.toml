@@ -19,8 +19,8 @@ env-plot  = "python scripts/plot_envs.py"
 sim-smoke = "python scripts/smoke_agent.py"
 
 # Testing
-test     = "pytest"
-test-cov = "pytest --cov=subiculum_rnn --cov-report=term-missing"
+test     = "python -m pytest"
+test-cov = "python -m pytest --cov=subiculum_rnn --cov-report=term-missing"
 
 
 ###################### ======== DEPENDENCIES ======== ######################
