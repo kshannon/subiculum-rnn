@@ -144,6 +144,8 @@ STUB_COMMANDS = [
     "model train --model-config configs/models/small.yaml"
     " --training-config configs/training/baseline.yaml --dataset ds_0001 --seed 1 --dry-run",
     "model evaluate rnn_000001 --dataset ds_0001 --dry-run",
+    "analysis record-hidden rnn_000001 --dataset ds_0001 --checkpoint best --dry-run",
+    "analysis axis rnn_000001 --dataset ds_0001 --config configs/analysis/axis_v1.yaml --dry-run",
 ]
 
 
