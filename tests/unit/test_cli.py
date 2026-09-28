@@ -136,6 +136,10 @@ def test_not_implemented_stub_exits_3_and_names_the_spec_section(capsys):
 STUB_COMMANDS = [
     "agent list",
     "agent inspect ballistic_runner --json",
+    "data inspect ds_0001 --json",
+    "data generate --config configs/datasets/pilot.yaml --seed 3 --dry-run",
+    "data validate ds_0001 --reference stats.yaml --dry-run",
+    "data stats ds_0001 --json",
 ]
 
 
