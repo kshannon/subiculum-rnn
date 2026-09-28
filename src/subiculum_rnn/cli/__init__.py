@@ -13,11 +13,11 @@ import argparse
 
 from .. import __version__
 from ..store import ENV_VAR, StoreError
-from . import agent, data, env, experiment
+from . import agent, data, env, experiment, model
 from . import store as store_group
 from ._output import fail
 
-GROUPS = (store_group, env, agent, data, experiment)
+GROUPS = (store_group, env, agent, data, model, experiment)
 
 DESCRIPTION = "Axis-of-travel emergence in position-predicting RNNs."
 EPILOG = (f"Artifacts live in a store chosen by --store, then ${ENV_VAR}, then "

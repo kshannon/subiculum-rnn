@@ -140,6 +140,10 @@ STUB_COMMANDS = [
     "data generate --config configs/datasets/pilot.yaml --seed 3 --dry-run",
     "data validate ds_0001 --reference stats.yaml --dry-run",
     "data stats ds_0001 --json",
+    "model inspect rnn_000001 --json",
+    "model train --model-config configs/models/small.yaml"
+    " --training-config configs/training/baseline.yaml --dataset ds_0001 --seed 1 --dry-run",
+    "model evaluate rnn_000001 --dataset ds_0001 --dry-run",
 ]
 
 
@@ -149,3 +153,18 @@ def test_stub_commands_parse_their_arguments_and_exit_3(argv, capsys):
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "not implemented" in captured.err and "docs/cli/spec.md" in captured.err
+
+
+def test_model_list_reports_empty_then_registered(tmp_path: Path, capsys):
+    store = tmp_path / "s"
+    assert main(["store", "init", str(store)]) == 0
+    capsys.readouterr()
+    root = ["--store", str(store)]
+    assert main([*root, "model", "list"]) == 0
+    assert "no models" in capsys.readouterr().out.lower()
+
+    _manifest(store, "models", "rnn_000001",
+              "id: rnn_000001\ndataset: ds_0001\ndescription: seed 1\n")
+    assert main([*root, "model", "list"]) == 0
+    out = capsys.readouterr().out
+    assert "rnn_000001" in out and "ds_0001" in out
