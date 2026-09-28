@@ -1,52 +1,77 @@
-"""Command-line entry point: ``subiculum-rnn <group> <command>``.
-
-Orchestration only. Each group is a module in this package exposing
-``register(groups)``; each command is a plain function with explicit
-parameters that returns an exit code. Nothing here knows how the science
-works; see docs/cli/spec.md for the contract.
-
-Exit codes: 0 success, 1 no command, 2 usage error, unknown name or unusable
-store, 3 not implemented, 4 provenance mismatch.
+"""
+Command-line entry point: subiculum-rnn <group> <command>.
 """
 
 import argparse
 
 from .. import __version__
 from ..store import ENV_VAR, StoreError
-from . import agent, analysis, data, env, experiment, model
-from . import store as store_group
-from ._output import fail
+from . import artifacts, env, store
+from ._output import fail, not_implemented
 
-GROUPS = (store_group, env, agent, data, model, analysis, experiment)
+GROUPS = {
+    "store": "the artifact store",
+    "env": "environment geometry",
+    "agent": "behavioral agents (model rats)",
+    "data": "synthetic trajectory datasets",
+    "model": "trained models (model animals)",
+    "analysis": "hidden states and axis-of-travel analysis",
+    "experiment": "experiments: populations of models",
+}
 
-DESCRIPTION = "Axis-of-travel emergence in position-predicting RNNs."
-EPILOG = (f"Artifacts live in a store chosen by --store, then ${ENV_VAR}, then "
-          "artifacts/ in this checkout. Exit codes: 0 success, 1 no command, "
-          "2 usage error or unusable store, 3 not implemented, "
-          "4 provenance mismatch.")
+STUBS = (
+    ("agent", "list", "list every agent config with its hash and use counts"),
+    ("agent", "inspect", "describe one agent: parameters, hashes, references"),
+    ("data", "inspect", "describe one dataset: manifest, counts, split, validation"),
+    ("data", "generate", "build a dataset from an environment, agents and seeds"),
+    ("data", "validate", "compare a dataset's behavior with a reference file"),
+    ("data", "stats", "print a dataset's behavioral statistics"),
+    ("model", "inspect", "describe one model: manifest, checkpoints, metrics"),
+    ("model", "train", "train one model animal"),
+    ("model", "evaluate", "evaluate a frozen model on a held-out split"),
+    ("analysis", "record-hidden", "record hidden states from a frozen checkpoint"),
+    ("analysis", "axis", "measure axis-of-travel tuning per hidden unit"),
+    ("experiment", "inspect", "describe one experiment: members, status, results"),
+    ("experiment", "run", "train a population from one config"),
+    ("experiment", "reproduce", "re-run an experiment and compare"),
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="subiculum-rnn", description=DESCRIPTION,
-                                     epilog=EPILOG)
+    parser = argparse.ArgumentParser(
+        prog="subiculum-rnn",
+        description="Axis-of-travel emergence in position-predicting RNNs.",
+        epilog="Exit codes: 0 success, 1 no command, 2 usage error or unusable store, "
+               "3 not implemented, 4 provenance mismatch.")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("--store", metavar="DIR", default=None,
+    parser.add_argument("--store", metavar="DIR",
                         help=f"artifact store for this run (default: ${ENV_VAR}, "
                              "else artifacts/ in the checkout)")
     groups = parser.add_subparsers(dest="group", metavar="<group>", title="groups")
-    for module in GROUPS:
-        module.register(groups)
+    commands = {}
+    for name, summary in GROUPS.items():
+        group = groups.add_parser(name, help=summary, description=summary)
+        group.set_defaults(group_parser=group)
+        commands[name] = group.add_subparsers(dest="command", metavar="<command>",
+                                              title="commands")
+    store.register(commands["store"])
+    env.register(commands["env"])
+    artifacts.register(commands["data"], "datasets")
+    artifacts.register(commands["model"], "models")
+    artifacts.register(commands["experiment"], "experiments")
+    for group_name, command, summary in STUBS:
+        p = commands[group_name].add_parser(command, help=summary)
+        p.set_defaults(func=not_implemented, name=f"{group_name} {command}")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    run = getattr(args, "run", None)
-    if run is None:
+    if not hasattr(args, "func"):
         getattr(args, "group_parser", parser).print_help()
         return 1
     try:
-        return run(args)
+        return args.func(args)
     except StoreError as e:
         return fail(str(e))

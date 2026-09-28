@@ -1,30 +1,30 @@
-"""env: environment geometry from configs/environments/."""
+"""
+The env group: list and inspect the environment configs in the checkout.
+"""
 
 import math
 
 from ..environments import list_environments, load_environment
 from ..paths import environments_dir
 from ._output import emit, fail, lines, table
-from ._parsers import add_json, group, leaf
-
-HELP = "environment geometry"
-DESCRIPTION = ("Environments are parametric configs under configs/environments/. "
-               "Each resolves to a geometry spec with a content hash that every "
-               "dataset records.")
 
 
-def register(groups) -> None:
-    commands = group(groups, "env", HELP, DESCRIPTION)
+def register(commands) -> None:
+    p = commands.add_parser(
+        "list", help="list every environment config with its hash",
+        description="List every environment config with its type, walls, routes and "
+                    "hash. Reads configs/environments/*.yaml; writes nothing.")
+    p.add_argument("--json", action="store_true", help="print the same data as JSON")
+    p.set_defaults(func=list_envs)
 
-    p = leaf(commands, "list", list_envs, example="subiculum-rnn env list")
-    add_json(p)
-    p.set_defaults(run=lambda a: list_envs(as_json=a.json))
-
-    p = leaf(commands, "inspect", inspect_env,
-             example="subiculum-rnn env inspect triple_t --json")
-    p.add_argument("env_id", metavar="<env>", help="config name, e.g. triple_t")
-    add_json(p)
-    p.set_defaults(run=lambda a: inspect_env(a.env_id, as_json=a.json))
+    p = commands.add_parser(
+        "inspect", help="describe one environment's geometry",
+        description="Describe one environment: geometry summary, or the canonical "
+                    "spec as JSON. Reads configs/environments/<env>.yaml and the base "
+                    "config it names; writes nothing.")
+    p.add_argument("env", metavar="<env>", help="config name, e.g. triple_t")
+    p.add_argument("--json", action="store_true", help="print the same data as JSON")
+    p.set_defaults(func=inspect_env)
 
 
 def _path_length(waypoints) -> float:
@@ -36,12 +36,7 @@ def _named_lengths(paths: dict) -> str:
                      for k, v in sorted(paths.items())) or "none"
 
 
-def list_envs(*, as_json: bool = False) -> int:
-    """List every environment config with its type, walls, routes and hash.
-
-    Reads: configs/environments/*.yaml.
-    Writes: nothing.
-    """
+def list_envs(args) -> int:
     names = list_environments()
     if not names:
         print(f"no environment configs under {environments_dir()}")
@@ -54,26 +49,20 @@ def list_envs(*, as_json: bool = False) -> int:
                      "walls": len(spec.walls), "routes": len(spec.routes),
                      "hash": spec.hash})
     emit(rows, table(rows, ["name", "type", "room", "walls", "routes", "hash"]),
-         as_json=as_json)
+         as_json=args.json)
     return 0
 
 
-def inspect_env(env_id: str, *, as_json: bool = False) -> int:
-    """Describe one environment: geometry summary, or the canonical spec as JSON.
-
-    Reads: configs/environments/<env>.yaml and its base config, if any.
-    Writes: nothing.
-    """
+def inspect_env(args) -> int:
     try:
-        spec = load_environment(env_id)
+        spec = load_environment(args.env)
     except FileNotFoundError as e:
         return fail(str(e))
-    params = {k: v for k, v in spec.params.items() if k != "derived"}
     pairs = [
         ("config", environments_dir() / f"{spec.name}.yaml"),
         ("type", spec.kind),
         ("room", f"{spec.room[0]:.2f} x {spec.room[1]:.2f} m"),
-        ("params", params),
+        ("params", {k: v for k, v in spec.params.items() if k != "derived"}),
     ]
     if "derived" in spec.params:
         pairs.append(("derived", spec.params["derived"]))
@@ -85,8 +74,8 @@ def inspect_env(env_id: str, *, as_json: bool = False) -> int:
         ("routes", _named_lengths(spec.routes)),
         ("returns", _named_lengths(spec.returns)),
         ("reward sites", ", ".join(f"{k} ({p[0]:.3f}, {p[1]:.3f})"
-                                   for k, p in spec.reward_sites.items()) or "none"),
+                                  for k, p in spec.reward_sites.items()) or "none"),
     ]
     emit({**spec.canonical(), "hash": spec.hash},
-         lines(f"{spec.name}  [{spec.hash}]", pairs), as_json=as_json)
+         lines(f"{spec.name}  [{spec.hash}]", pairs), as_json=args.json)
     return 0

@@ -1,56 +1,73 @@
-"""The artifact store: where datasets, models and experiments live.
-
-A store is a directory outside git, on this machine or an external drive,
-holding a ``store.yaml`` marker and one directory per artifact kind. It is
-chosen per invocation by ``--store``, per machine by the SUBICULUM_RNN_STORE
-environment variable, and otherwise defaults to ``artifacts/`` inside the
-checkout. Commands only touch a marked store, which catches an unmounted
-drive or a mistyped path before anything is written. Nothing else lives in
-a store.
+"""
+The artifact store: how it is found, its marker, its layout and the artifacts inside it.
 """
 
 import os
 import socket
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Mapping
 
 import yaml
 
 from . import __version__
-from .experiments.registry import scan_manifests
 from .paths import repo_root
 
 ENV_VAR = "SUBICULUM_RNN_STORE"
 MARKER = "store.yaml"
+MANIFEST = "manifest.yaml"
 STORE_VERSION = 1
 KINDS = ("datasets", "models", "experiments")
 
 
 class StoreError(Exception):
-    """The store cannot be used; the message says why and what to do."""
+    pass
 
 
-def default_store_root() -> Path:
-    return repo_root() / "artifacts"
+@dataclass(frozen=True)
+class Artifact:
+    id: str
+    path: Path
+    meta: dict
+
+
+def _scan(directory: Path) -> tuple[list[Artifact], list[str], list[str]]:
+    """
+    Artifacts by id, directories without a manifest, and manifests with the wrong id.
+    """
+    if not directory.is_dir():
+        return [], [], []
+    artifacts, unmarked, broken = [], [], []
+    for d in sorted(p for p in directory.iterdir() if p.is_dir()):
+        manifest = d / MANIFEST
+        if not manifest.is_file():
+            unmarked.append(f"{d.name} has no {MANIFEST}")
+            continue
+        meta = yaml.safe_load(manifest.read_text())
+        if not isinstance(meta, dict):
+            broken.append(f"{d.name}/{MANIFEST} is not a mapping")
+        elif meta.get("id", d.name) != d.name:
+            broken.append(f"{d.name}/{MANIFEST} declares id {meta['id']!r}")
+        else:
+            artifacts.append(Artifact(id=d.name, path=d, meta=meta))
+    return artifacts, unmarked, broken
 
 
 def git_commit() -> str | None:
-    """HEAD of the checkout containing the package, or None outside git."""
     try:
         out = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_root(),
                              capture_output=True, text=True, check=True)
     except (OSError, subprocess.CalledProcessError):
         return None
-    return out.stdout.strip() or None
+    return out.stdout.strip()
 
 
 @dataclass(frozen=True)
 class Store:
     root: Path
-    source: str          # how it was chosen: flag, env, default, argument
+    source: str  # flag, env, default, argument
 
     @property
     def marker(self) -> Path:
@@ -61,32 +78,24 @@ class Store:
         return self.marker.is_file()
 
     def kind_dir(self, kind: str) -> Path:
-        if kind not in KINDS:
-            raise ValueError(f"unknown artifact kind {kind!r}; known: {KINDS}")
         return self.root / kind
 
     def read_marker(self) -> dict:
-        """The marker's contents. Raises StoreError if the store is unusable."""
-        if not self.root.is_dir():
-            raise StoreError(f"store not found at {self.root}; is the drive "
-                             f"mounted? run `store init`")
-        if not self.marker.is_file():
-            raise StoreError(f"{self.root} is not a store (no {MARKER}); "
-                             f"run `store init`")
+        if not self.initialized:
+            raise StoreError(f"store not found at {self.root}; "
+                             f"is the drive mounted? run `store init`")
         marker = yaml.safe_load(self.marker.read_text()) or {}
         version = marker.get("store_version")
         if not isinstance(version, int) or version > STORE_VERSION:
-            raise StoreError(f"store at {self.root} has version {version}; "
+            raise StoreError(f"store at {self.root} has store_version {version!r}; "
                              f"this tool supports {STORE_VERSION}, update the tool")
         return marker
 
     def init(self) -> dict:
-        """Create the layout and marker. An initialized store is left as is."""
         if self.initialized:
             return self.read_marker()
-        self.root.mkdir(parents=True, exist_ok=True)
         for kind in KINDS:
-            self.kind_dir(kind).mkdir(exist_ok=True)
+            self.kind_dir(kind).mkdir(parents=True, exist_ok=True)
         marker = {
             "store_version": STORE_VERSION,
             "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -97,35 +106,31 @@ class Store:
         self.marker.write_text(yaml.safe_dump(marker, sort_keys=False))
         return marker
 
-    def check(self) -> list[str]:
-        """Problems found: missing kind directories, subdirectories without a
-        manifest, manifests whose id differs from their directory."""
-        problems = []
-        for kind in KINDS:
-            directory = self.kind_dir(kind)
-            if not directory.is_dir():
-                problems.append(f"{kind}/ is missing")
-                continue
-            problems += [f"{kind}/{p}" for p in scan_manifests(directory)[1]]
-        return problems
+    def artifacts(self, kind: str) -> list[Artifact]:
+        artifacts, _, broken = _scan(self.kind_dir(kind))
+        if broken:
+            raise StoreError(f"{self.kind_dir(kind)}: " + "; ".join(broken))
+        return artifacts
 
-    def counts(self) -> dict[str, int]:
-        """Valid artifacts per kind."""
-        return {kind: len(scan_manifests(self.kind_dir(kind))[0]) for kind in KINDS}
+    def survey(self) -> tuple[dict[str, int], list[str]]:
+        counts, problems = {}, []
+        for kind in KINDS:
+            artifacts, unmarked, broken = _scan(self.kind_dir(kind))
+            counts[kind] = len(artifacts)
+            problems += [f"{kind}/{p}" for p in unmarked + broken]
+        return counts, problems
 
 
 def resolve_store(flag: str | None, env: Mapping[str, str] | None = None) -> Store:
-    """Pick the store without checking it: flag, then environment, then default."""
     env = os.environ if env is None else env
     if flag:
         return Store(Path(flag).expanduser(), "flag")
     if env.get(ENV_VAR):
         return Store(Path(env[ENV_VAR]).expanduser(), "env")
-    return Store(default_store_root(), "default")
+    return Store(repo_root() / "artifacts", "default")
 
 
 def open_store(flag: str | None, env: Mapping[str, str] | None = None) -> Store:
-    """Resolve the store and require its marker."""
     store = resolve_store(flag, env)
     store.read_marker()
     return store

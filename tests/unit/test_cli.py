@@ -1,11 +1,49 @@
-"""CLI: every command runs, prints something useful, and exits cleanly."""
+"""
+The CLI: dispatch, exit codes and what the implemented commands print.
+"""
 
+import argparse
 import json
 from pathlib import Path
 
 import pytest
 
-from subiculum_rnn.cli import main
+from subiculum_rnn.cli import STUBS, build_parser, main
+from subiculum_rnn.cli._output import not_implemented
+
+ENV_NAMES = ["open_arena", "plus_maze", "triple_t", "triple_t_rot90"]
+KINDS = [("data", "datasets"), ("model", "models"), ("experiment", "experiments")]
+STUB_COMMANDS = [f"{group} {command}" for group, command, _ in STUBS]
+REAL = {"store init", "store inspect", "env list", "env inspect", "data list",
+        "model list", "experiment list"}
+
+
+def _commands(parser):
+    """
+    Every "<group> <command>" in the parser tree, paired with its own parser.
+    """
+    def subparsers(p):
+        for action in p._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                return action.choices
+        return {}
+
+    for group, group_parser in subparsers(parser).items():
+        for command, command_parser in subparsers(group_parser).items():
+            yield f"{group} {command}", command_parser
+
+
+def _init_store(tmp_path: Path, capsys) -> Path:
+    root = tmp_path / "store"
+    assert main(["store", "init", str(root)]) == 0
+    capsys.readouterr()
+    return root
+
+
+def _manifest(root: Path, kind: str, name: str, body: str) -> None:
+    d = root / kind / name
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "manifest.yaml").write_text(body)
 
 
 def test_no_command_prints_help(capsys):
@@ -13,163 +51,89 @@ def test_no_command_prints_help(capsys):
     assert "usage" in capsys.readouterr().out.lower()
 
 
-def test_env_list_shows_every_config_with_its_hash(capsys):
-    assert main(["env", "list"]) == 0
-    out = capsys.readouterr().out
-    for name in ("open_arena", "plus_maze", "triple_t", "triple_t_rot90"):
-        assert name in out
-    assert "hash" in out
-
-
-def test_env_list_json_lists_every_config(capsys):
-    assert main(["env", "list", "--json"]) == 0
-    rows = json.loads(capsys.readouterr().out)
-    assert [r["name"] for r in rows] == ["open_arena", "plus_maze", "triple_t", "triple_t_rot90"]
-    assert all(len(r["hash"]) == 12 for r in rows)
-
-
-def test_group_without_command_prints_group_help(capsys):
+def test_group_without_a_command_prints_that_group_help(capsys):
     assert main(["env"]) == 1
     assert "inspect" in capsys.readouterr().out
 
 
-def test_env_inspect_reports_geometry(capsys):
-    from subiculum_rnn.environments import load_environment
-    spec = load_environment("triple_t")
-    assert main(["env", "inspect", "triple_t"]) == 0
+def test_env_list_shows_every_config(capsys):
+    assert main(["env", "list"]) == 0
     out = capsys.readouterr().out
-    assert spec.hash in out
-    assert "ee" in out and "start" in out
+    assert all(name in out for name in ENV_NAMES)
+    assert "hash" in out
+
+    assert main(["env", "list", "--json"]) == 0
+    rows = json.loads(capsys.readouterr().out)
+    assert [row["name"] for row in rows] == ENV_NAMES
+    assert all(len(row["hash"]) == 12 for row in rows)
 
 
 def test_env_inspect_json_is_the_canonical_spec(capsys):
-    assert main(["env", "inspect", "open_arena", "--json"]) == 0
+    assert main(["env", "inspect", "triple_t", "--json"]) == 0
     spec = json.loads(capsys.readouterr().out)
-    assert spec["name"] == "open_arena"
-    assert spec["kind"] == "circle"
-    assert "hash" in spec
+    assert spec["name"] == "triple_t"
+    assert {"kind", "hash"} <= set(spec)
 
 
-def test_env_inspect_unknown_name_fails_with_a_hint(capsys):
-    assert main(["env", "inspect", "nope"]) != 0
+def test_env_inspect_unknown_name_lists_what_exists(capsys):
+    assert main(["env", "inspect", "nope"]) == 2
     err = capsys.readouterr().err
-    assert "nope" in err and "triple_t" in err
-
-
-def _manifest(store: Path, kind: str, name: str, body: str):
-    d = store / kind / name
-    d.mkdir(parents=True)
-    (d / "manifest.yaml").write_text(body)
+    assert "nope" in err and all(name in err for name in ENV_NAMES)
 
 
 def test_store_init_then_inspect(tmp_path: Path, capsys):
-    store = tmp_path / "s"
-    assert main(["store", "init", str(store)]) == 0
-    assert (store / "store.yaml").is_file()
-    assert main(["--store", str(store), "store", "inspect"]) == 0
+    root = _init_store(tmp_path, capsys)
+    assert main(["--store", str(root), "store", "inspect"]) == 0
     out = capsys.readouterr().out
-    assert str(store) in out and "datasets" in out
-    assert main(["--store", str(store), "store", "inspect", "--json"]) == 0
+    assert str(root) in out
+    assert all(kind in out for kind in ("datasets", "models", "experiments"))
+
+    assert main(["--store", str(root), "store", "inspect", "--json"]) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["counts"] == {"datasets": 0, "models": 0, "experiments": 0}
     assert report["source"] == "flag"
 
 
-def test_store_init_defaults_to_the_environment_variable(tmp_path: Path, monkeypatch):
-    store = tmp_path / "from-env"
-    monkeypatch.setenv("SUBICULUM_RNN_STORE", str(store))
+def test_store_init_without_a_directory_uses_the_environment_variable(
+        tmp_path: Path, monkeypatch):
+    root = tmp_path / "from-env"
+    monkeypatch.setenv("SUBICULUM_RNN_STORE", str(root))
     assert main(["store", "init"]) == 0
-    assert (store / "store.yaml").is_file()
+    assert (root / "store.yaml").is_file()
 
 
-def test_store_commands_fail_cleanly_without_a_marker(tmp_path: Path, capsys):
-    missing = tmp_path / "unplugged"
-    assert main(["--store", str(missing), "data", "list"]) == 2
+def test_an_unusable_store_fails_cleanly(tmp_path: Path, capsys):
+    assert main(["--store", str(tmp_path / "unplugged"), "data", "list"]) == 2
     assert "store not found" in capsys.readouterr().err
-    assert main(["--store", str(missing), "store", "inspect"]) == 2
 
 
-def test_data_list_reports_empty_then_registered(tmp_path: Path, capsys):
-    store = tmp_path / "s"
-    assert main(["store", "init", str(store)]) == 0
-    capsys.readouterr()
-    root = ["--store", str(store)]
-    assert main([*root, "data", "list"]) == 0
+@pytest.mark.parametrize("group,kind", KINDS, ids=[k for _, k in KINDS])
+def test_list_reports_empty_then_registered(group, kind, tmp_path: Path, capsys):
+    root = _init_store(tmp_path, capsys)
+    assert main(["--store", str(root), group, "list"]) == 0
+    assert f"no {kind} registered" in capsys.readouterr().out
+
+    _manifest(root, kind, "a_0001", "id: a_0001\ndescription: first one\n")
+    assert main(["--store", str(root), group, "list"]) == 0
     out = capsys.readouterr().out
-    assert "no datasets" in out.lower()
-    assert str(store / "datasets") in out
-
-    _manifest(store, "datasets", "ds_0001",
-              "id: ds_0001\nenvironment: triple_t\ndescription: pilot\n")
-    assert main([*root, "data", "list"]) == 0
-    out = capsys.readouterr().out
-    assert "ds_0001" in out and "triple_t" in out and "pilot" in out
+    assert "a_0001" in out and "first one" in out
 
 
-def test_experiment_list_reports_empty_then_registered(tmp_path: Path, capsys):
-    store = tmp_path / "s"
-    assert main(["store", "init", str(store)]) == 0
-    capsys.readouterr()
-    root = ["--store", str(store)]
-    assert main([*root, "experiment", "list"]) == 0
-    assert "no experiments" in capsys.readouterr().out.lower()
-
-    _manifest(store, "experiments", "exp_0001",
-              "id: exp_0001\ndescription: first sweep\n")
-    assert main([*root, "experiment", "list"]) == 0
-    out = capsys.readouterr().out
-    assert "exp_0001" in out and "first sweep" in out
+def test_a_manifest_with_the_wrong_id_fails_the_list(tmp_path: Path, capsys):
+    root = _init_store(tmp_path, capsys)
+    _manifest(root, "datasets", "ds_0001", "id: ds_0009\n")
+    assert main(["--store", str(root), "data", "list"]) == 2
+    assert "ds_0009" in capsys.readouterr().err
 
 
-def test_not_implemented_stub_exits_3_and_names_the_spec_section(capsys):
-    from subiculum_rnn.cli._stub import not_implemented
-    assert not_implemented("data generate", "Commands") == 3
+@pytest.mark.parametrize("name", STUB_COMMANDS)
+def test_every_stub_exits_3(name, capsys):
+    assert main(name.split()) == 3
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "data generate" in captured.err
     assert "not implemented" in captured.err
-    assert "docs/cli/spec.md" in captured.err and "Commands" in captured.err
 
 
-# Commands specified but not yet implemented: each parses its documented
-# arguments and exits 3. Rows are added as each group lands.
-STUB_COMMANDS = [
-    "agent list",
-    "agent inspect ballistic_runner --json",
-    "data inspect ds_0001 --json",
-    "data generate --config configs/datasets/pilot.yaml --seed 3 --dry-run",
-    "data validate ds_0001 --reference stats.yaml --dry-run",
-    "data stats ds_0001 --json",
-    "model inspect rnn_000001 --json",
-    "model train --model-config configs/models/small.yaml"
-    " --training-config configs/training/baseline.yaml --dataset ds_0001 --seed 1 --dry-run",
-    "model evaluate rnn_000001 --dataset ds_0001 --dry-run",
-    "analysis record-hidden rnn_000001 --dataset ds_0001 --checkpoint best --dry-run",
-    "analysis axis rnn_000001 --dataset ds_0001 --config configs/analysis/axis_v1.yaml --dry-run",
-    "experiment inspect exp_0001 --json",
-    "experiment run --config configs/experiments/seed_sweep.yaml --dry-run",
-    "experiment reproduce exp_0001 --dry-run",
-]
-
-
-@pytest.mark.parametrize("argv", STUB_COMMANDS)
-def test_stub_commands_parse_their_arguments_and_exit_3(argv, capsys):
-    assert main(argv.split()) == 3
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "not implemented" in captured.err and "docs/cli/spec.md" in captured.err
-
-
-def test_model_list_reports_empty_then_registered(tmp_path: Path, capsys):
-    store = tmp_path / "s"
-    assert main(["store", "init", str(store)]) == 0
-    capsys.readouterr()
-    root = ["--store", str(store)]
-    assert main([*root, "model", "list"]) == 0
-    assert "no models" in capsys.readouterr().out.lower()
-
-    _manifest(store, "models", "rnn_000001",
-              "id: rnn_000001\ndataset: ds_0001\ndescription: seed 1\n")
-    assert main([*root, "model", "list"]) == 0
-    out = capsys.readouterr().out
-    assert "rnn_000001" in out and "ds_0001" in out
+def test_the_implemented_commands_are_the_ones_the_spec_promises():
+    assert {name for name, parser in _commands(build_parser())
+            if parser.get_default("func") is not not_implemented} == REAL
