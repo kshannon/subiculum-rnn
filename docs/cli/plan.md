@@ -18,7 +18,7 @@ Read with spec.md. No code here.
         env.py         register(groups); list_envs(), inspect_env()
         agent.py       register(groups); stubs
         data.py        register(groups); list (real), stubs
-        model.py       register(groups); stubs
+        model.py       register(groups); list (real), stubs
         analysis.py    register(groups); stubs
         experiment.py  register(groups); list (real), stubs
 
