@@ -3,7 +3,7 @@
 import math
 
 from ..environments import list_environments, load_environment
-from ..paths import ProjectPaths
+from ..paths import environments_dir
 from ._output import emit, fail, lines, table
 from ._parsers import add_json, group, leaf
 
@@ -18,15 +18,13 @@ def register(groups) -> None:
 
     p = leaf(commands, "list", list_envs, example="subiculum-rnn env list")
     add_json(p)
-    p.set_defaults(run=lambda a: list_envs(ProjectPaths.from_root(a.root),
-                                           as_json=a.json))
+    p.set_defaults(run=lambda a: list_envs(as_json=a.json))
 
     p = leaf(commands, "inspect", inspect_env,
              example="subiculum-rnn env inspect triple_t --json")
     p.add_argument("env_id", metavar="<env>", help="config name, e.g. triple_t")
     add_json(p)
-    p.set_defaults(run=lambda a: inspect_env(ProjectPaths.from_root(a.root),
-                                             a.env_id, as_json=a.json))
+    p.set_defaults(run=lambda a: inspect_env(a.env_id, as_json=a.json))
 
 
 def _path_length(waypoints) -> float:
@@ -38,19 +36,19 @@ def _named_lengths(paths: dict) -> str:
                      for k, v in sorted(paths.items())) or "none"
 
 
-def list_envs(paths: ProjectPaths, *, as_json: bool = False) -> int:
+def list_envs(*, as_json: bool = False) -> int:
     """List every environment config with its type, walls, routes and hash.
 
     Reads: configs/environments/*.yaml.
     Writes: nothing.
     """
-    names = list_environments(paths.environments)
+    names = list_environments()
     if not names:
-        print(f"no environment configs under {paths.environments}")
+        print(f"no environment configs under {environments_dir()}")
         return 0
     rows = []
     for name in names:
-        spec = load_environment(name, paths.environments)
+        spec = load_environment(name)
         rows.append({"name": spec.name, "type": spec.kind,
                      "room": f"{spec.room[0]:.2f} x {spec.room[1]:.2f} m",
                      "walls": len(spec.walls), "routes": len(spec.routes),
@@ -60,19 +58,19 @@ def list_envs(paths: ProjectPaths, *, as_json: bool = False) -> int:
     return 0
 
 
-def inspect_env(paths: ProjectPaths, env_id: str, *, as_json: bool = False) -> int:
+def inspect_env(env_id: str, *, as_json: bool = False) -> int:
     """Describe one environment: geometry summary, or the canonical spec as JSON.
 
     Reads: configs/environments/<env>.yaml and its base config, if any.
     Writes: nothing.
     """
     try:
-        spec = load_environment(env_id, paths.environments)
+        spec = load_environment(env_id)
     except FileNotFoundError as e:
         return fail(str(e))
     params = {k: v for k, v in spec.params.items() if k != "derived"}
     pairs = [
-        ("config", paths.environments / f"{spec.name}.yaml"),
+        ("config", environments_dir() / f"{spec.name}.yaml"),
         ("type", spec.kind),
         ("room", f"{spec.room[0]:.2f} x {spec.room[1]:.2f} m"),
         ("params", params),

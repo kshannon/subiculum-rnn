@@ -56,20 +56,50 @@ def test_env_inspect_unknown_name_fails_with_a_hint(capsys):
     assert "nope" in err and "triple_t" in err
 
 
-def _manifest(root: Path, kind: str, name: str, body: str):
-    d = root / "artifacts" / kind / name
+def _manifest(store: Path, kind: str, name: str, body: str):
+    d = store / kind / name
     d.mkdir(parents=True)
     (d / "manifest.yaml").write_text(body)
 
 
+def test_store_init_then_inspect(tmp_path: Path, capsys):
+    store = tmp_path / "s"
+    assert main(["store", "init", str(store)]) == 0
+    assert (store / "store.yaml").is_file()
+    assert main(["--store", str(store), "store", "inspect"]) == 0
+    out = capsys.readouterr().out
+    assert str(store) in out and "datasets" in out
+    assert main(["--store", str(store), "store", "inspect", "--json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["counts"] == {"datasets": 0, "models": 0, "experiments": 0}
+    assert report["source"] == "flag"
+
+
+def test_store_init_defaults_to_the_environment_variable(tmp_path: Path, monkeypatch):
+    store = tmp_path / "from-env"
+    monkeypatch.setenv("SUBICULUM_RNN_STORE", str(store))
+    assert main(["store", "init"]) == 0
+    assert (store / "store.yaml").is_file()
+
+
+def test_store_commands_fail_cleanly_without_a_marker(tmp_path: Path, capsys):
+    missing = tmp_path / "unplugged"
+    assert main(["--store", str(missing), "data", "list"]) == 2
+    assert "store not found" in capsys.readouterr().err
+    assert main(["--store", str(missing), "store", "inspect"]) == 2
+
+
 def test_data_list_reports_empty_then_registered(tmp_path: Path, capsys):
-    root = ["--root", str(tmp_path)]
+    store = tmp_path / "s"
+    assert main(["store", "init", str(store)]) == 0
+    capsys.readouterr()
+    root = ["--store", str(store)]
     assert main([*root, "data", "list"]) == 0
     out = capsys.readouterr().out
     assert "no datasets" in out.lower()
-    assert str(tmp_path / "artifacts" / "datasets") in out
+    assert str(store / "datasets") in out
 
-    _manifest(tmp_path, "datasets", "ds_0001",
+    _manifest(store, "datasets", "ds_0001",
               "id: ds_0001\nenvironment: triple_t\ndescription: pilot\n")
     assert main([*root, "data", "list"]) == 0
     out = capsys.readouterr().out
@@ -77,11 +107,14 @@ def test_data_list_reports_empty_then_registered(tmp_path: Path, capsys):
 
 
 def test_experiment_list_reports_empty_then_registered(tmp_path: Path, capsys):
-    root = ["--root", str(tmp_path)]
+    store = tmp_path / "s"
+    assert main(["store", "init", str(store)]) == 0
+    capsys.readouterr()
+    root = ["--store", str(store)]
     assert main([*root, "experiment", "list"]) == 0
     assert "no experiments" in capsys.readouterr().out.lower()
 
-    _manifest(tmp_path, "experiments", "exp_0001",
+    _manifest(store, "experiments", "exp_0001",
               "id: exp_0001\ndescription: first sweep\n")
     assert main([*root, "experiment", "list"]) == 0
     out = capsys.readouterr().out

@@ -1,7 +1,7 @@
 """data: synthetic trajectory datasets in the artifact store."""
 
 from ..experiments.registry import list_manifests
-from ..paths import ProjectPaths
+from ..store import Store, open_store
 from ._output import emit, manifest_table
 from ._parsers import add_json, group, leaf
 
@@ -16,19 +16,19 @@ def register(groups) -> None:
 
     p = leaf(commands, "list", list_datasets, example="subiculum-rnn data list")
     add_json(p)
-    p.set_defaults(run=lambda a: list_datasets(ProjectPaths.from_root(a.root),
-                                               as_json=a.json))
+    p.set_defaults(run=lambda a: list_datasets(open_store(a.store), as_json=a.json))
 
 
-def list_datasets(paths: ProjectPaths, *, as_json: bool = False) -> int:
+def list_datasets(store: Store, *, as_json: bool = False) -> int:
     """List registered datasets with environment, agents, input hash and created.
 
     Reads: <store>/datasets/*/manifest.yaml.
     Writes: nothing.
     """
-    entries = list_manifests(paths.datasets)
+    directory = store.kind_dir("datasets")
+    entries = list_manifests(directory)
     if not entries:
-        print(f"no datasets registered under {paths.datasets}")
+        print(f"no datasets registered under {directory}")
         print("(a dataset is a directory holding manifest.yaml; "
               "`data generate` is not implemented yet)")
         return 0

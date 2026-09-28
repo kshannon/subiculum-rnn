@@ -1,7 +1,7 @@
 """experiment: populations of model animals trained under one config."""
 
 from ..experiments.registry import list_manifests
-from ..paths import ProjectPaths
+from ..store import Store, open_store
 from ._output import emit, manifest_table
 from ._parsers import add_json, group, leaf
 
@@ -16,19 +16,20 @@ def register(groups) -> None:
     p = leaf(commands, "list", list_experiments,
              example="subiculum-rnn experiment list")
     add_json(p)
-    p.set_defaults(run=lambda a: list_experiments(ProjectPaths.from_root(a.root),
+    p.set_defaults(run=lambda a: list_experiments(open_store(a.store),
                                                   as_json=a.json))
 
 
-def list_experiments(paths: ProjectPaths, *, as_json: bool = False) -> int:
+def list_experiments(store: Store, *, as_json: bool = False) -> int:
     """List registered experiments with config, model count and status.
 
     Reads: <store>/experiments/*/manifest.yaml.
     Writes: nothing.
     """
-    entries = list_manifests(paths.experiments)
+    directory = store.kind_dir("experiments")
+    entries = list_manifests(directory)
     if not entries:
-        print(f"no experiments registered under {paths.experiments}")
+        print(f"no experiments registered under {directory}")
         print("(an experiment is a directory holding manifest.yaml; "
               "training is not implemented yet)")
         return 0
