@@ -63,6 +63,11 @@ data/**
 *.zarr/
 .dandi/
 
+# ============ Artifacts: datasets, models, experiments (regenerable) ============
+artifacts/**
+!artifacts/**/
+!artifacts/**/.gitkeep
+
 # ============ Figures & Results ============
 results/**
 !results/**/

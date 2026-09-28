@@ -519,6 +519,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a8/9c/5e49f71504351107bd38eee99cc39db4b81b63f3d4f5b04af49555b3fd88/ratinabox-1.15.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b9/37/e781683abac55dde9771e086b790e554811a71ed0b2b8a1e789b7430dd44/shapely-2.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
+      - pypi: ./
   default:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -1011,6 +1012,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a8/9c/5e49f71504351107bd38eee99cc39db4b81b63f3d4f5b04af49555b3fd88/ratinabox-1.15.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b9/37/e781683abac55dde9771e086b790e554811a71ed0b2b8a1e789b7430dd44/shapely-2.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
+      - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -1447,6 +1449,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a8/9c/5e49f71504351107bd38eee99cc39db4b81b63f3d4f5b04af49555b3fd88/ratinabox-1.15.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/07/59dee0bc4b913b7ab59ab1086225baca5b8f19865e6101db9ebb7243e132/shapely-2.1.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
+      - pypi: ./
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-7_kmp_llvm.conda
   build_number: 7
@@ -11215,6 +11218,18 @@ packages:
   - pkg:pypi/statsmodels?source=hash-mapping
   size: 11537488
   timestamp: 1764984166760
+- pypi: ./
+  name: subiculum-rnn
+  version: 0.0.1
+  sha256: 4dcccba9ccfb61e276fe779f172291f375ad756b4281a5e6dda9c10e66db9f41
+  requires_dist:
+  - numpy>=1.26
+  - pyyaml>=6
+  - pydantic>=2.5
+  - xarray>=2023.6
+  - zarr>=3,<4
+  requires_python: '>=3.12'
+  editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/svt-av1-4.0.1-hecca717_0.conda
   sha256: 4a1d2005153b9454fc21c9bad1b539df189905be49e851ec62a6212c2e045381
   md5: 2a2170a3e5c9a354d09e4be718c43235
