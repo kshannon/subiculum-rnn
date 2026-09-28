@@ -119,3 +119,13 @@ def test_experiment_list_reports_empty_then_registered(tmp_path: Path, capsys):
     assert main([*root, "experiment", "list"]) == 0
     out = capsys.readouterr().out
     assert "exp_0001" in out and "first sweep" in out
+
+
+def test_not_implemented_stub_exits_3_and_names_the_spec_section(capsys):
+    from subiculum_rnn.cli._stub import not_implemented
+    assert not_implemented("data generate", "Commands") == 3
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "data generate" in captured.err
+    assert "not implemented" in captured.err
+    assert "docs/cli/spec.md" in captured.err and "Commands" in captured.err
