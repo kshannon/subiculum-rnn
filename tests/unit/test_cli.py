@@ -129,3 +129,19 @@ def test_not_implemented_stub_exits_3_and_names_the_spec_section(capsys):
     assert "data generate" in captured.err
     assert "not implemented" in captured.err
     assert "docs/cli/spec.md" in captured.err and "Commands" in captured.err
+
+
+# Commands specified but not yet implemented: each parses its documented
+# arguments and exits 3. Rows are added as each group lands.
+STUB_COMMANDS = [
+    "agent list",
+    "agent inspect ballistic_runner --json",
+]
+
+
+@pytest.mark.parametrize("argv", STUB_COMMANDS)
+def test_stub_commands_parse_their_arguments_and_exit_3(argv, capsys):
+    assert main(argv.split()) == 3
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "not implemented" in captured.err and "docs/cli/spec.md" in captured.err
