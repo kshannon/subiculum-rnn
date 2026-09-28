@@ -146,6 +146,9 @@ STUB_COMMANDS = [
     "model evaluate rnn_000001 --dataset ds_0001 --dry-run",
     "analysis record-hidden rnn_000001 --dataset ds_0001 --checkpoint best --dry-run",
     "analysis axis rnn_000001 --dataset ds_0001 --config configs/analysis/axis_v1.yaml --dry-run",
+    "experiment inspect exp_0001 --json",
+    "experiment run --config configs/experiments/seed_sweep.yaml --dry-run",
+    "experiment reproduce exp_0001 --dry-run",
 ]
 
 
