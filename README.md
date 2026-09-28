@@ -1,6 +1,10 @@
 # subiculum-rnn
 
-A recurrent neural network trained to predict future position and head direction from inputs to subiculum (e.g. ADn, CA1, RSC). The latent space is examined for emergent axis-of-travel and spatial-analogy representations. Synthetic data generated with the RatInABox python library<sup>3</sup>.
+This repository contains a computational neuroscience research project investigating whether axis-of-travel-like representations can emerge spontaneously in a simple recurrent neural network (RNN) trained to predict an animal's future position during spatial navigation. The biological motivation is the literature describing axis-of-travel representations in the subiculum. The computational question is:
+> If a simple recurrent network is trained only to predict future position from behavioral
+> trajectory information, without being given an explicit axis-of-travel variable, does an
+> axis-of-travel representation emerge in its hidden state?
+
 
 ## Quick start
 
@@ -24,7 +28,7 @@ There is a complex history of these tertms and what they mean within different f
 - **Reproducibility**: obtaining consistent results using the same input data, computational methods, and conditions of analysis.
 
 
-Synthetic, and open source data results should be reproducible. Results using your own collected recording data should be replicable to within some stated percision. Given the stochastic nature of machine learning methods, from data cleaning to pipeline construction to training and validation, it can be daunting to provide 100% reproducibility, but it is a standard to strive for nonetheless. 
+Synthetic data (generated with the RatInABox python library<sup>3</sup>), and open source data results should be reproducible. Results using your own collected recording data should be replicable to within some stated percision. Given the stochastic nature of machine learning methods, from data cleaning to pipeline construction to training and validation, it can be daunting to provide near 100% reproducibility, but it is a standard to strive for nonetheless.
 
 To that end, this README provides all instructions needed to reproduce our synthetic data results. Instructions for reproducing results with open-source data and our own recorded data are provided in the project wiki.
 
