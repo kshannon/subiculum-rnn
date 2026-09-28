@@ -25,8 +25,8 @@ pixi run subiculum-rnn env list
 
 # 5. Choose where artifacts live: artifacts/ in this checkout by default,
 #    or a directory elsewhere, for example on an external drive
-pixi run subiculum-rnn store init                       # default location
-pixi run subiculum-rnn store init /Volumes/data/subiculum-rnn
+pixi run subiculum-rnn store init                       # default location (gitignored)
+pixi run subiculum-rnn store init /Volumes/haruhi/phd/kshannon/subiculum-rnn-data # or a custom location
 export SUBICULUM_RNN_STORE=/Volumes/data/subiculum-rnn  # per machine, e.g. in your shell config
 pixi run subiculum-rnn store inspect
 ```
@@ -50,13 +50,6 @@ pixi run env-plot                                  # draw every environment to f
 pixi run sim-smoke triple_t --seconds 120          # RatInABox random walk over an environment
 pixi run note                                      # new lab notebook entry
 ```
-
-Every command in the spec exists today. Those whose science is not yet built
-(agents, data generation and validation, training, evaluation, hidden-state
-recording, axis analysis, experiment runs) parse their full arguments, print
-"not implemented" with their spec section, and exit with code 3. Exit codes:
-0 success, 1 no command, 2 usage error or unusable store, 3 not implemented,
-4 provenance mismatch.
 
 Artifacts (datasets, models, experiments) are written only by this command,
 into a store outside git: `--store DIR` for one run, the `SUBICULUM_RNN_STORE`
@@ -115,12 +108,12 @@ Synthetic data (generated with the RatInABox python library<sup>3</sup>), and op
 To that end, this README provides all instructions needed to reproduce our synthetic data results. Instructions for reproducing results with open-source data and our own recorded data are provided in the project wiki.
 
 
-| Requirement | How it's met |
-|-------------|-------------|
-| **Exact software versions** | `pixi.lock` pins every Python package, and its transitive dependencies, to a specific version |
-| **Versioned data provenance** | Each synthetic dataset has a manifest with all generation parameters, seeds, the environment geometry hash and an ID |
+| Requirement                            | How it's met                                                                                                                                  |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Exact software versions**            | `pixi.lock` pins every Python package, and its transitive dependencies, to a specific version                                                 |
+| **Versioned data provenance**          | Each synthetic dataset has a manifest with all generation parameters, seeds, the environment geometry hash and an ID                          |
 | **Logged and versioned training runs** | Every dataset, model and experiment is a directory under `artifacts/` with a `manifest.yaml` recording config, seed, code commit and lockfile |
-| **Cross-platform** | `pixi.toml` targets `linux-64`, `osx-arm64` |
+| **Cross-platform**                     | `pixi.toml` targets `linux-64`, `osx-arm64`                                                                                                   |
 
 
 ## Citation
