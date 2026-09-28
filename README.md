@@ -94,9 +94,8 @@ src/subiculum_rnn/
   behavior/      agents, synthetic trajectories, behavioral statistics (not yet)
   models/        vanilla RNN, loss, training (not yet)
   analysis/      hidden states, axis tuning, controls, perturbations (not yet)
-  experiments/   artifact registry and manifests
-  store.py       the artifact store: resolution order, marker, layout
-  cli/           the command line entry point, one module per group
+  store.py       the artifact store: resolution order, marker, layout, manifest scan
+  cli/           the command line entry point: groups, stub table, real commands
 tests/           unit, integration (RatInABox, zarr), scientific
 docs/            research plan, data dictionary, reproduction, and per-feature spec, plan, tasks (docs/cli/)
 artifacts/       the default store: datasets, models, experiments (git-ignored, regenerable)

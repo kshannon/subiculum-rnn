@@ -1,73 +1,60 @@
-# CLI implementation plan
+# CLI implementation plan, PR 1
 
 Read with spec.md. No code here.
 
 ## Architecture
 
     src/subiculum_rnn/
-      paths.py         configs_dir(): the checkout containing the package
-      store.py         resolve_store(flag) -> Store: flag, then SUBICULUM_RNN_STORE, then artifacts/
-                       Store: root, kind_dir(kind), marker read/write, init(), check()
-      experiments/registry.py   list_manifests(dir) unchanged; id allocation lands with the first writer
+      paths.py                  repo_root(), configs_dir(), environments_dir()
+      store.py                  resolve_store(), open_store(); Store: marker, layout, init, artifacts, survey
       cli/
-        __init__.py    build_parser(), main(): global options, group registration, dispatch
-        _output.py     table(), lines(), emit(data, as_json), fail(message, code)
-        _parsers.py    group(), leaf(): help from docstrings, example epilogs; add_json(), add_dry_run()
-        _stub.py       not_implemented(command, spec_section): message to stderr, exit 3
-        store.py       register(groups); init_store(), inspect_store()
-        env.py         register(groups); list_envs(), inspect_env()
-        agent.py       register(groups); stubs
-        data.py        register(groups); list (real), stubs
-        model.py       register(groups); list (real), stubs
-        analysis.py    register(groups); stubs
-        experiment.py  register(groups); list (real), stubs
+        __init__.py             build_parser(), main(); GROUPS (name, one-line help); STUBS table
+        _output.py              table(), lines(), emit(), fail(), not_implemented()
+        store.py                store init, store inspect
+        env.py                  env list, env inspect
+        artifacts.py            one list command, registered for datasets, models, experiments
 
-Every group module has the same shape: a one-line HELP string, a `register`
-function that adds the group's subparsers and binds each leaf to a command
-function through a small adapter, and one plain function per command taking
-the resolved store plus explicit typed arguments and returning an exit code.
-Docstrings are the help text; each leaf parser carries a one-line example as
-its epilog. The adapter is the only place that reads an argparse namespace,
-so command functions are plain Python and reusable from notebooks.
+Dispatch is the standard argparse idiom. Every command is `def cmd(args) -> int`
+bound with `set_defaults(func=cmd)`; `main` calls `args.func(args)` and turns a
+`StoreError` into exit 2. A group given without a command prints that group's
+help and returns 1. Stubs are rows in one table, group, command and one-line
+help, each bound to `not_implemented`, which prints the standard message and
+returns 3.
 
-The store is package code, not CLI code: `store.py` owns resolution order,
-the marker file, layout creation and the consistency check, so notebooks and
-future writers use the same object the CLI does. Real data has no
-representation anywhere in this layout.
+Rule for later PRs: when a group gains a real command beyond `list`, it gets
+its own module and its rows leave the stub table. The layout grows into one
+module per group as the science lands, not ahead of it.
 
-## Implementation order
+## Implementation order, this PR
 
-1. Package skeleton and output helpers. Move env list and inspect across with
-   behavior unchanged; existing CLI tests pass. Delete the old module.
-2. Store: `store.py` with resolution order, marker, init and check, then the
-   `store` group and the `--store` global replacing `--root`. Data list and
-   experiment list read from the store. Tests cover precedence, refusal
-   without a marker, init layout, inspect counts.
-3. Help and exit-code contract: descriptions and examples on every leaf, the
-   stub helper, codes 1 through 3 exercised.
-4. Group modules with stubs: agent, data, model, analysis, experiment. Every
-   command parses its full argument list, including `--json` and `--dry-run`.
-5. Tests: a walk over the parser tree asserting every leaf has a description
-   and an example; every stub exits 3; bad arguments exit 2.
-6. Docs: README setup with the store and the environment variable, an
-   explanation of how synthetic data is generated, reproduction commands,
-   tasks checked off.
+1. Packaging and the package modules the CLI imports: pyproject with the
+   console script, editable install through pixi, package init, environment
+   builders, test package inits.
+2. Store: resolution order, marker, layout, the manifest scan; `store init` and
+   `store inspect`.
+3. CLI package: root parser with `--store`, groups, the stub table, env and
+   list commands, output helpers.
+4. Tests: store logic, dispatch and exit codes, what the real commands print,
+   every stub exits 3.
+5. Docs: spec, this plan, tasks, README setup and reproduction commands.
 
 ## Key decisions
 
-- argparse over Typer. Zero dependencies. Readability comes from structure,
-  one function per command with explicit parameters, not from the framework.
-  Revisit if any group module passes 150 lines.
-- One module per group so the help tree mirrors the file tree.
+- argparse, standard idioms, no dependencies. Commands take the parsed args;
+  no adapters and no docstring-to-help machinery.
+- Stubs are data, not modules: fourteen rows in one table. Arguments are
+  defined only when a command is implemented, in that command's PR.
+- One list implementation serves the three artifact kinds, and one manifest scan
+  in the store serves both listing and `store inspect`.
 - Two locations, not one: configs from the checkout, artifacts from a store
-  chosen by flag, environment variable, or default. `--root` goes away.
-- A store is marked. Writers refuse unmarked directories so an unmounted
-  drive or a typo cannot produce a stray tree.
-- Ids are derived from directories, never from an index file that can drift.
-  A uuid and the input hash in every manifest give identity across stores.
-- Stubs parse real arguments now so the help contract and tests are complete
-  before the science exists, and later work only replaces function bodies.
-- Recordings and analysis results live inside the model directory, keeping
-  three artifact kinds and one registry.
-- Exit code 4 is reserved now and first used when a consumer command lands.
-- The existing single-file CLI is replaced, not kept alongside.
+  chosen by flag, environment variable, or default. A store is marked, and
+  commands refuse unmarked directories, so an unmounted drive or a typo cannot
+  produce a stray tree.
+- Ids are derived from directories, never from an index file. A uuid and the
+  input hash in every manifest give identity across stores; both arrive with
+  the first writer.
+- Recordings and analysis results live inside the model directory: three kinds.
+- Module docstrings are one line between the quotes. Rationale lives in the
+  spec and here, not in comments.
+- Tests cover this project's logic only, not what argparse, pathlib or yaml
+  already guarantee.

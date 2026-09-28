@@ -1,5 +1,9 @@
 # subiculum-rnn CLI
 
+PR 1, branch `feature/cli`: the package layout, the store, real `store`, `env` and
+list commands, and bare stubs for everything else. Later PRs implement one group at a
+time under their own spec, plan and tasks.
+
 ## Overview
 
 One command, `subiculum-rnn`, orchestrates the pipeline: environments, behavioral agents,
@@ -26,7 +30,9 @@ their hash, yield the same artifact, so writers reuse before they create.
 
 ### Commands
 
-One group per layer. `<x>` is required, `--x` optional. Purpose says what it does; rationale says why it exists.
+One group per layer. `<x>` is required, `--x` optional. Purpose says what it does; rationale
+says why it exists. Arguments shown for unimplemented commands are the planned shape; they are
+defined in code only when the command is implemented.
 
 | command | purpose | rationale |
 |---|---|---|
@@ -61,16 +67,17 @@ One group per layer. `<x>` is required, `--x` optional. Purpose says what it doe
 - Configs always come from the checkout containing the package, so commands run from any
   directory.
 - `--version` prints the package version, the same value every manifest records.
-- `--json`, on every list and inspect command, emits the same data as JSON for scripting.
-- `--dry-run`, on every writing command, resolves the inputs and prints their hashes and the
-  id that would be created, then writes nothing.
+- `--json`, on every implemented list and inspect command, emits the same data as JSON.
+- `--dry-run`, on every writing command once implemented, resolves the inputs and prints
+  their hashes and the id that would be created, then writes nothing.
 
 ### Status
 
-The env group is implemented. Every other command exists as a stub: it parses its full
-argument list, so `--help` and argument errors already behave as specified, then prints
-"not implemented" with its spec section to stderr and exits 3. Later work replaces stub
-bodies only; the parser and help never need to change.
+PR 1 implements `store init`, `store inspect`, `env list`, `env inspect`, `data list`,
+`model list` and `experiment list`. Every other command is a bare stub: its name and a
+one-line help appear in the help tree, and running it prints "not implemented" with a
+pointer to this spec on stderr and exits 3. A stub takes no arguments; they arrive with
+the implementation, in that command's own PR.
 
 ### Data Model
 
@@ -105,8 +112,8 @@ bodies only; the parser and help never need to change.
   the drift, runs into a new experiment linked to the original, and reports the comparison.
 - `experiment run` adopts an existing model whose input hash equals a member's instead of
   retraining it, and records the adoption in the experiment manifest.
-- Help: the root lists groups; a group lists its commands; a command shows arguments,
-  what it reads and writes, and one example.
+- Help: the root lists groups; a group lists its commands; an implemented command shows
+  its arguments and what it reads and writes; a stub says it is not implemented.
 - Exit codes: 0 success, 1 no command, 2 usage error, unknown name or unusable store,
   3 not implemented, 4 provenance mismatch.
 
@@ -124,9 +131,13 @@ bodies only; the parser and help never need to change.
 
 - Python 3.12, argparse from the standard library, no new dependencies. `main(argv) -> int`
   is testable in-process with `--store` at a temporary directory and runs from any directory.
-- `src/subiculum_rnn/cli/` package: one module per group under 150 lines, one plain
-  function per command with explicit typed parameters, shared output helpers in one
-  module, docstrings as help text. Store resolution and layout live in the package, not the CLI.
+- `src/subiculum_rnn/cli/` package, standard argparse idioms, shared output helpers in
+  one module. Stubs are rows in one table; a group gets its own module once it has a real
+  command beyond `list`. Store resolution and layout live in the package, not the CLI.
+- Module docstrings are one line of text on its own line between the quotes. Design and
+  rationale live in this spec and the plan, not in comments.
+- Tests cover the CLI's own behavior: dispatch and exit codes, store logic, what the real
+  commands print. They do not test what argparse, pathlib or yaml already guarantee.
 
 ## Out of Scope
 
