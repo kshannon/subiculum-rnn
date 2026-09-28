@@ -1,8 +1,3 @@
-"""Where configs live: always the checkout containing this package, so
-commands run from any working directory. Artifacts live in a store instead;
-see store.py.
-"""
-
 from pathlib import Path
 
 
