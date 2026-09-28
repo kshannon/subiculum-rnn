@@ -12,6 +12,7 @@ Read with spec.md. No code here.
       cli/
         __init__.py    build_parser(), main(): global options, group registration, dispatch
         _output.py     table(), lines(), emit(data, as_json), fail(message, code)
+        _parsers.py    group(), leaf(): help from docstrings, example epilogs; add_json(), add_dry_run()
         _stub.py       not_implemented(command, spec_section): message to stderr, exit 3
         store.py       register(groups); init_store(), inspect_store()
         env.py         register(groups); list_envs(), inspect_env()
