@@ -19,10 +19,10 @@ def register(commands) -> None:
     p.set_defaults(func=init_store)
 
     p = commands.add_parser(
-        "inspect", help="show the resolved store, its marker, counts and problems",
+        "inspect", help="show the resolved store, its marker and counts",
         description="Show the resolved store: path, how it was chosen, marker "
-                    "contents, artifacts per kind, problems found. Reads store.yaml "
-                    "and every manifest; writes nothing.")
+                    "contents, artifacts per kind. Reads store.yaml and every "
+                    "manifest; writes nothing.")
     p.add_argument("--json", action="store_true", help="print the same data as JSON")
     p.set_defaults(func=inspect_store)
 
@@ -43,12 +43,11 @@ def init_store(args) -> int:
 def inspect_store(args) -> int:
     store = resolve_store(args.store)
     marker = store.read_marker()
-    counts, problems = store.survey()
+    counts = store.counts()
     report = {"path": str(store.root), "source": store.source, "marker": marker,
-              "counts": counts, "problems": problems}
+              "counts": counts}
     pairs = [("path", store.root), ("chosen by", store.source)]
     pairs += [(key.replace("_", " "), value) for key, value in marker.items()]
     pairs += list(counts.items())
-    pairs.append(("problems", "; ".join(problems) or "none"))
     emit(report, lines(f"store {store.root}", pairs), as_json=args.json)
     return 0

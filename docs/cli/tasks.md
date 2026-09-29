@@ -10,7 +10,7 @@ listed command. The branch is squashed on merge; this list is the logical trail.
 - [x] T3 Package modules the CLI imports: package init, `__main__`, environment
   builders, test package inits. Verify: `subiculum-rnn env list`. [Commands]
 - [x] T4 Store: `store.py` with resolution order, marker, layout, the manifest scan,
-  and the survey behind `store inspect`. Verify: `subiculum-rnn store init /tmp/s &&
+  and the counts behind `store inspect`. Verify: `subiculum-rnn store init /tmp/s &&
   subiculum-rnn --store /tmp/s store inspect`. [Data Model, Edge Cases]
 - [x] T5 CLI package: root parser with `--store`, groups, the stub table, `store`,
   `env` and list commands, output helpers. Verify: `subiculum-rnn --help`;

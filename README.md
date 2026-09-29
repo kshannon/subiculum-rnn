@@ -40,7 +40,7 @@ example. The contract is [docs/cli/spec.md](docs/cli/spec.md).
 
 ```bash
 pixi run subiculum-rnn --help                      # the groups: store, env, agent, data, model, analysis, experiment
-pixi run subiculum-rnn store inspect               # where artifacts go, marker, counts, problems
+pixi run subiculum-rnn store inspect               # where artifacts go, marker, counts
 pixi run subiculum-rnn env list                    # environment configs and geometry hashes
 pixi run subiculum-rnn env inspect triple_t --json # one environment; the JSON is exactly what gets hashed
 pixi run subiculum-rnn data list                   # registered datasets in the store

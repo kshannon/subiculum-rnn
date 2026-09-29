@@ -37,7 +37,7 @@ defined in code only when the command is implemented.
 | command | purpose | rationale |
 |---|---|---|
 | `store init [DIR]` | create the store layout and its `store.yaml` marker at DIR, default the resolved store | writers only write into a marked store, which catches an unmounted drive or a mistyped path |
-| `store inspect [--json]` | resolved path and how it was resolved, marker contents, counts per kind, problems found | the first command of the day: confirm where work will land before any of it happens |
+| `store inspect [--json]` | resolved path and how it was resolved, marker contents, counts per kind | the first command of the day: confirm where work will land before any of it happens |
 | `env list` | every environment config with type, walls, routes, hash | the hash is what every dataset records; see it before anything runs |
 | `env inspect <env> [--json]` | geometry summary, or the canonical spec as JSON | what is printed is exactly what is hashed, so configs can be diffed |
 | `agent list` | every behavioral profile with hash, headline stats, and how many datasets, models and experiments use it | agents are the unit of behavioral variation; know how much rests on each |

@@ -33,17 +33,16 @@ class Artifact:
     meta: dict
 
 
-def _scan(directory: Path) -> tuple[list[Artifact], list[str], list[str]]:
+def _scan(directory: Path) -> tuple[list[Artifact], list[str]]:
     """
-    Artifacts by id, directories without a manifest, and manifests with the wrong id.
+    Artifacts by id, plus the manifests that are malformed or declare the wrong id.
     """
     if not directory.is_dir():
-        return [], [], []
-    artifacts, unmarked, broken = [], [], []
+        return [], []
+    artifacts, broken = [], []
     for d in sorted(p for p in directory.iterdir() if p.is_dir()):
         manifest = d / MANIFEST
         if not manifest.is_file():
-            unmarked.append(f"{d.name} has no {MANIFEST}")
             continue
         meta = yaml.safe_load(manifest.read_text())
         if not isinstance(meta, dict):
@@ -52,7 +51,7 @@ def _scan(directory: Path) -> tuple[list[Artifact], list[str], list[str]]:
             broken.append(f"{d.name}/{MANIFEST} declares id {meta['id']!r}")
         else:
             artifacts.append(Artifact(id=d.name, path=d, meta=meta))
-    return artifacts, unmarked, broken
+    return artifacts, broken
 
 
 @dataclass(frozen=True)
@@ -103,18 +102,13 @@ class Store:
                 f"is the drive mounted? run `store init`")
 
     def artifacts(self, kind: str) -> list[Artifact]:
-        artifacts, _, broken = _scan(self.kind_dir(kind))
+        artifacts, broken = _scan(self.kind_dir(kind))
         if broken:
             raise StoreError(f"{self.kind_dir(kind)}: " + "; ".join(broken))
         return artifacts
 
-    def survey(self) -> tuple[dict[str, int], list[str]]:
-        counts, problems = {}, []
-        for kind in KINDS:
-            artifacts, unmarked, broken = _scan(self.kind_dir(kind))
-            counts[kind] = len(artifacts)
-            problems += [f"{kind}/{p}" for p in unmarked + broken]
-        return counts, problems
+    def counts(self) -> dict[str, int]:
+        return {kind: len(_scan(self.kind_dir(kind))[0]) for kind in KINDS}
 
 
 def resolve_store(flag: str | None, env: Mapping[str, str] | None = None) -> Store:

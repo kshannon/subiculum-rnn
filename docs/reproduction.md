@@ -16,7 +16,7 @@ package in editable mode, which provides the `subiculum-rnn` command.
     pixi run test-cov                              # with coverage
     pixi run subiculum-rnn --help                  # groups; add --help to any group or command
     pixi run subiculum-rnn store init [DIR]        # create a store (default: the resolved one)
-    pixi run subiculum-rnn store inspect [--json]  # resolved path, marker, counts, problems
+    pixi run subiculum-rnn store inspect [--json]  # resolved path, marker, counts
     pixi run subiculum-rnn env list [--json]       # environment configs and hashes
     pixi run subiculum-rnn env inspect triple_t [--json]
     pixi run subiculum-rnn data list               # registered datasets

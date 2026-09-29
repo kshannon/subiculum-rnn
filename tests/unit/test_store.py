@@ -64,16 +64,13 @@ def test_open_store_refuses_a_marker_from_a_newer_tool(tmp_path: Path):
         open_store(str(store.root), env={})
 
 
-def test_survey_counts_artifacts_and_reports_problems(tmp_path: Path):
+def test_counts_include_only_valid_artifacts(tmp_path: Path):
     store = Store(tmp_path / "s", "flag")
     store.init()
     _artifact(store, "datasets", "ds_0001", "ds_0001")
     _artifact(store, "datasets", "ds_0002", "ds_0009")
     (store.kind_dir("models") / "scratch").mkdir()
-    counts, problems = store.survey()
-    assert counts == {"datasets": 1, "models": 0, "experiments": 0}
-    assert any("ds_0002" in p and "ds_0009" in p for p in problems)
-    assert any("models/scratch" in p for p in problems)
+    assert store.counts() == {"datasets": 1, "models": 0, "experiments": 0}
 
 
 def test_artifacts_skips_unmarked_directories_and_refuses_a_wrong_id(tmp_path: Path):

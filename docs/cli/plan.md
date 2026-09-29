@@ -6,7 +6,7 @@ Read with spec.md. No code here.
 
     src/subiculum_rnn/
       paths.py                  repo_root(), configs_dir(), environments_dir()
-      store.py                  resolve_store(), open_store(); Store: marker, layout, init, artifacts, survey
+      store.py                  resolve_store(), open_store(); Store: marker, layout, init, artifacts, counts
       cli/
         __init__.py             build_parser(), main(); GROUPS (name, one-line help); STUBS table
         _output.py              table(), lines(), emit(), fail(), not_implemented()
