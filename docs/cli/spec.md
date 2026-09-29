@@ -121,8 +121,9 @@ the implementation, in that command's own PR.
 
 - Store path without a marker: error naming the path and how it was chosen, exit 2. For a
   path from the flag or the variable it asks whether the drive is mounted; for the default
-  it says how to point elsewhere; both say to run `store init`. A marker newer than the
-  tool: refuse, exit 2.
+  it says how to point elsewhere; both say to run `store init`. A marker that cannot be
+  read: error naming the file and the reason, exit 2. A marker newer than the tool:
+  refuse, exit 2.
 - Unknown name or id: error naming it and listing what exists, exit 2. Same for a manifest
   id differing from its directory or a config that fails to resolve, naming the file and key.
 - Nothing of a kind in the store: "no <kind> registered under <path>", exit 0.

@@ -73,7 +73,10 @@ class Store:
     def read_marker(self) -> dict:
         if not self.initialized:
             raise StoreError(self._missing())
-        marker = yaml.safe_load(self.marker.read_text()) or {}
+        try:
+            marker = yaml.safe_load(self.marker.read_text()) or {}
+        except OSError as e:
+            raise StoreError(f"cannot read {self.marker}: {e.strerror}") from e
         version = marker.get("store_version")
         if not isinstance(version, int) or version > STORE_VERSION:
             raise StoreError(f"store at {self.root} has store_version {version!r}; "

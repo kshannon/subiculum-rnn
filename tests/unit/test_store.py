@@ -64,6 +64,14 @@ def test_open_store_refuses_a_marker_from_a_newer_tool(tmp_path: Path):
         open_store(str(store.root), env={})
 
 
+def test_open_store_reports_an_unreadable_marker(tmp_path: Path):
+    store = Store(tmp_path / "s", "flag")
+    store.init()
+    store.marker.chmod(0)
+    with pytest.raises(StoreError, match="cannot read"):
+        open_store(str(store.root), env={})
+
+
 def test_counts_include_only_valid_artifacts(tmp_path: Path):
     store = Store(tmp_path / "s", "flag")
     store.init()
