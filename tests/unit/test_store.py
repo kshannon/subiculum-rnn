@@ -32,23 +32,28 @@ def test_init_creates_the_layout_and_the_marker(tmp_path: Path):
     store = Store(tmp_path / "s", "flag")
     marker = store.init()
     assert all(store.kind_dir(kind).is_dir() for kind in KINDS)
-    assert set(marker) == {"store_version", "created", "hostname", "repo_commit",
-                           "tool_version"}
+    assert set(marker) == {"store_version", "created", "hostname", "tool_version"}
     assert marker["store_version"] == STORE_VERSION
     assert store.init() == marker
 
 
-def test_open_store_requires_a_marker(tmp_path: Path):
+def test_open_store_requires_a_marker_and_says_how_the_path_was_chosen(tmp_path: Path):
     missing = tmp_path / "missing"
     with pytest.raises(StoreError) as caught:
         open_store(str(missing), env={})
-    assert str(missing) in str(caught.value) and "store init" in str(caught.value)
+    message = str(caught.value)
+    assert str(missing) in message and "store init" in message
+    assert "--store" in message and "drive" in message
 
     bare = tmp_path / "bare"
     bare.mkdir()
+    with pytest.raises(StoreError, match="store init"):
+        open_store(None, env={ENV_VAR: str(bare)})
+
     with pytest.raises(StoreError) as caught:
-        open_store(str(bare), env={})
-    assert str(bare) in str(caught.value) and "store init" in str(caught.value)
+        Store(tmp_path / "default", "default").read_marker()
+    message = str(caught.value)
+    assert "default" in message and ENV_VAR in message and "drive" not in message
 
 
 def test_open_store_refuses_a_marker_from_a_newer_tool(tmp_path: Path):

@@ -4,7 +4,6 @@ The artifact store: how it is found, its marker, its layout and the artifacts in
 
 import os
 import socket
-import subprocess
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -20,6 +19,7 @@ MARKER = "store.yaml"
 MANIFEST = "manifest.yaml"
 STORE_VERSION = 1
 KINDS = ("datasets", "models", "experiments")
+CHOSEN_BY = {"flag": "--store", "env": f"${ENV_VAR}", "argument": "the argument"}
 
 
 class StoreError(Exception):
@@ -55,15 +55,6 @@ def _scan(directory: Path) -> tuple[list[Artifact], list[str], list[str]]:
     return artifacts, unmarked, broken
 
 
-def git_commit() -> str | None:
-    try:
-        out = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_root(),
-                             capture_output=True, text=True, check=True)
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    return out.stdout.strip()
-
-
 @dataclass(frozen=True)
 class Store:
     root: Path
@@ -82,8 +73,7 @@ class Store:
 
     def read_marker(self) -> dict:
         if not self.initialized:
-            raise StoreError(f"store not found at {self.root}; "
-                             f"is the drive mounted? run `store init`")
+            raise StoreError(self._missing())
         marker = yaml.safe_load(self.marker.read_text()) or {}
         version = marker.get("store_version")
         if not isinstance(version, int) or version > STORE_VERSION:
@@ -100,11 +90,17 @@ class Store:
             "store_version": STORE_VERSION,
             "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "hostname": socket.gethostname(),
-            "repo_commit": git_commit(),
             "tool_version": __version__,
         }
         self.marker.write_text(yaml.safe_dump(marker, sort_keys=False))
         return marker
+
+    def _missing(self) -> str:
+        if self.source == "default":
+            return (f"no store at {self.root} (the default location; pass --store DIR or "
+                    f"set {ENV_VAR} to use another); run `store init` to create it")
+        return (f"store not found at {self.root} (from {CHOSEN_BY[self.source]}); "
+                f"is the drive mounted? run `store init`")
 
     def artifacts(self, kind: str) -> list[Artifact]:
         artifacts, _, broken = _scan(self.kind_dir(kind))
