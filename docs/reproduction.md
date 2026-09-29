@@ -12,7 +12,7 @@ package in editable mode, which provides the `subiculum-rnn` command.
 
 ## Commands
 
-    pixi run test                                  # unit + integration tests
+    pixi run test                                  # unit tests
     pixi run test-cov                              # with coverage
     pixi run subiculum-rnn --help                  # groups; add --help to any group or command
     pixi run subiculum-rnn store init [DIR]        # create a store (default: the resolved one)
@@ -22,8 +22,6 @@ package in editable mode, which provides the `subiculum-rnn` command.
     pixi run subiculum-rnn data list               # registered datasets
     pixi run subiculum-rnn model list              # registered models
     pixi run subiculum-rnn experiment list         # registered experiments
-    pixi run env-plot                              # figures/environments.png
-    pixi run sim-smoke triple_t --seconds 120 --seed 0
 
 `python -m subiculum_rnn` is equivalent to `subiculum-rnn`. The store is
 chosen by `--store DIR`, else the `SUBICULUM_RNN_STORE` variable, else

@@ -27,7 +27,7 @@ pixi run subiculum-rnn env list
 #    or a directory elsewhere, for example on an external drive
 pixi run subiculum-rnn store init                       # default location (gitignored)
 pixi run subiculum-rnn store init /Volumes/haruhi/phd/kshannon/subiculum-rnn-data # or a custom location
-export SUBICULUM_RNN_STORE=/Volumes/data/subiculum-rnn  # per machine, e.g. in your shell config
+export SUBICULUM_RNN_STORE=/Volumes/haruhi/phd/kshannon/subiculum-rnn-data  # per machine, e.g. in your shell config
 pixi run subiculum-rnn store inspect
 ```
 
@@ -46,8 +46,6 @@ pixi run subiculum-rnn env inspect triple_t --json # one environment; the JSON i
 pixi run subiculum-rnn data list                   # registered datasets in the store
 pixi run subiculum-rnn model list                  # registered models (model animals)
 pixi run subiculum-rnn experiment list             # registered experiments (populations)
-pixi run env-plot                                  # draw every environment to figures/environments.png
-pixi run sim-smoke triple_t --seconds 120          # RatInABox random walk over an environment
 pixi run note                                      # new lab notebook entry
 ```
 
@@ -59,38 +57,32 @@ catches an unplugged drive. Each artifact carries a manifest recording the
 configs and hashes, seeds, git commit and lockfile that produced it, so it is
 regenerable and never modified in place.
 
-## How synthetic data is generated
+## How synthetic data will be generated
 
 No recorded animal data lives in this repository or its store. Behavior is
-synthetic: an environment config (triple-T track, open arena) fixes the
-geometry; an agent config fixes a behavioral profile, meaning speed, turning
-and dwell statistics and a goal policy; a dataset config names an environment,
-agents, sessions and trials, seeds, and a split policy. `data generate` turns
-that into trajectories of position and heading, stores velocity, speed and
-angular velocity derived from them beside the raw arrays, and records every
-config hash and seed in the dataset's manifest. `data validate` compares the
-dataset's behavioral statistics against an aggregate reference-statistics file
-and writes the report into the dataset. Only position reaches the RNN during
-training; heading and kinematics exist for validation and controls. See
-[docs/data_dictionary.md](docs/data_dictionary.md) for every field.
-
-Principles every change must respect are in [AGENTS.md](AGENTS.md); status
-and open decisions are in [docs/research_plan.md](docs/research_plan.md).
+synthetic, and the generator is planned, not built: an environment config
+(triple-T track, open arena) fixes the geometry; an agent config will fix a
+behavioral profile, meaning speed, turning and dwell statistics and a goal
+policy; a dataset config will name an environment, agents, sessions and
+trials, seeds, and a split policy. `data generate` will turn that into
+trajectories of position and heading, store velocity, speed and angular
+velocity derived from them beside the raw arrays, and record every config hash
+and seed in the dataset's manifest. `data validate` will compare the dataset's
+behavioral statistics against an aggregate reference-statistics file and write
+the report into the dataset. Only position will reach the RNN during training;
+heading and kinematics exist for validation and controls. Today those commands
+are stubs that exit 3; the contract is [docs/cli/spec.md](docs/cli/spec.md).
 
 ## Layout
 
 ```
-configs/         declarative YAML: environments (built), datasets, models, training, experiments
+configs/         declarative YAML; environments today, datasets, models, training and experiments later
 src/subiculum_rnn/
   environments/  parametric geometry (triple-T, open arena, plus maze), content hashes, RatInABox adapter
-  datasets/      trajectory schema and zarr IO; later generation, validation, versioning
-  behavior/      agents, synthetic trajectories, behavioral statistics (not yet)
-  models/        vanilla RNN, loss, training (not yet)
-  analysis/      hidden states, axis tuning, controls, perturbations (not yet)
   store.py       the artifact store: resolution order, marker, layout, manifest scan
   cli/           the command line entry point: groups, stub table, real commands
-tests/           unit, integration (RatInABox, zarr), scientific
-docs/            research plan, data dictionary, reproduction, and per-feature spec, plan, tasks (docs/cli/)
+tests/           unit tests for the store and the CLI
+docs/            reproduction steps, and per-feature spec, plan and tasks (docs/cli/)
 artifacts/       the default store: datasets, models, experiments (git-ignored, regenerable)
 labnotebook/     dated entries, `pixi run note`
 ```
