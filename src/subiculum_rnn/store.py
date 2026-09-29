@@ -97,8 +97,8 @@ class Store:
 
     def _missing(self) -> str:
         if self.source == "default":
-            return (f"no store at {self.root} (the default location; pass --store DIR or "
-                    f"set {ENV_VAR} to use another); run `store init` to create it")
+            return (f"no store at {self.root} (the default location; pass --store DIR "
+                    f"or set {ENV_VAR} to use another); run `store init` to create it")
         return (f"store not found at {self.root} (from {CHOSEN_BY[self.source]}); "
                 f"is the drive mounted? run `store init`")
 
