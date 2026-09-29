@@ -8,24 +8,19 @@ version   = "0.1.0"
 
 ###################### ======== TASKS ======== ######################
 [tasks]
+# Project CLI is an installed console script, no task needed:
+#   pixi run subiculum-rnn env list
+
 # Lab notebook
 note = "zsh scripts/new_labnote.sh"
 
-# Env plots
-env-plot = "python scripts/plot_envs.py"
-
-# Data pipeline
-data-synthetic = "python -m src.data.synthetic --config configs/data/synthetic.yaml"
-
-# Training
-train       = "python -m src.train --config-dir configs"
-train-debug = "python -m src.train --config-dir configs --config-name debug"
-
-# Analysis
+# Environment figures and a RatInABox smoke run
+env-plot  = "python scripts/plot_envs.py"
+sim-smoke = "python scripts/smoke_agent.py"
 
 # Testing
-test = "pytest tests/ -v --cov=src --cov-report=term-missing"
-sim-smoke = "python scripts/smoke_agent.py"
+test     = "python -m pytest"
+test-cov = "python -m pytest --cov=subiculum_rnn --cov-report=term-missing"
 
 
 ###################### ======== DEPENDENCIES ======== ######################
@@ -57,6 +52,8 @@ pyyaml = ">=6"
 [pypi-dependencies]
 pynapple = ">=0.4"
 ratinabox = ">=1"
+# The project package itself, editable so src/ edits are live.
+subiculum-rnn = { path = ".", editable = true }
 
 ###################### ======== DEV / CUDA FEATURES ======== ######################
 [feature.dev.dependencies]

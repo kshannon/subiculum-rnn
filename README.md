@@ -1,6 +1,10 @@
 # subiculum-rnn
 
-A recurrent neural network trained to predict future position and head direction from inputs to subiculum (e.g. ADn, CA1, RSC). The latent space is examined for emergent axis-of-travel and spatial-analogy representations. Synthetic data generated with the RatInABox python library<sup>3</sup>.
+This repository contains a computational neuroscience research project investigating whether axis-of-travel-like representations can emerge spontaneously in a simple recurrent neural network (RNN) trained to predict an animal's future position during spatial navigation. The biological motivation is the literature describing axis-of-travel representations in the subiculum. The computational question is:
+> If a simple recurrent network is trained only to predict future position from behavioral
+> trajectory information, without being given an explicit axis-of-travel variable, does an
+> axis-of-travel representation emerge in its hidden state?
+
 
 ## Quick start
 
@@ -12,8 +16,75 @@ curl -fsSL https://pixi.sh/install.sh | bash
 git clone git@github.com:kshannon/subiculum-rnn.git
 cd subiculum-rnn
 
-# 3. Install environment and dependencies
+# 3. Install environment, dependencies and the project package (editable)
 pixi install
+
+# 4. Check it works
+pixi run test
+pixi run subiculum-rnn env list
+
+# 5. Choose where artifacts live: artifacts/ in this checkout by default,
+#    or a directory elsewhere, for example on an external drive
+pixi run subiculum-rnn store init                       # default location (gitignored)
+pixi run subiculum-rnn store init /Volumes/haruhi/phd/kshannon/subiculum-rnn-data # or a custom location
+export SUBICULUM_RNN_STORE=/Volumes/haruhi/phd/kshannon/subiculum-rnn-data  # per machine, e.g. in your shell config
+pixi run subiculum-rnn store inspect
+```
+
+## Using the project
+
+The `subiculum-rnn` command orchestrates everything; the science lives in the
+package under `src/subiculum_rnn/`. Commands are grouped by layer, and every
+group and command has `--help` with what it reads, what it writes and an
+example. The contract is [docs/cli/spec.md](docs/cli/spec.md).
+
+```bash
+pixi run subiculum-rnn --help                      # the groups: store, env, agent, data, model, analysis, experiment
+pixi run subiculum-rnn store inspect               # where artifacts go, marker, counts
+pixi run subiculum-rnn env list                    # environment configs and geometry hashes
+pixi run subiculum-rnn env inspect triple_t --json # one environment; the JSON is exactly what gets hashed
+pixi run subiculum-rnn data list                   # registered datasets in the store
+pixi run subiculum-rnn model list                  # registered models (model animals)
+pixi run subiculum-rnn experiment list             # registered experiments (populations)
+pixi run note                                      # new lab notebook entry
+```
+
+Artifacts (datasets, models, experiments) are written only by this command,
+into a store outside git: `--store DIR` for one run, the `SUBICULUM_RNN_STORE`
+variable per machine, or `artifacts/` in the checkout by default. A store is a
+directory with a `store.yaml` marker; commands refuse anything else, which
+catches an unplugged drive. Each artifact carries a manifest recording the
+configs and hashes, seeds, git commit and lockfile that produced it, so it is
+regenerable and never modified in place.
+
+## How synthetic data will be generated
+
+No recorded animal data lives in this repository or its store. Behavior is
+synthetic, and the generator is planned, not built: an environment config
+(triple-T track, open arena) fixes the geometry; an agent config will fix a
+behavioral profile, meaning speed, turning and dwell statistics and a goal
+policy; a dataset config will name an environment, agents, sessions and
+trials, seeds, and a split policy. `data generate` will turn that into
+trajectories of position and heading, store velocity, speed and angular
+velocity derived from them beside the raw arrays, and record every config hash
+and seed in the dataset's manifest. `data validate` will compare the dataset's
+behavioral statistics against an aggregate reference-statistics file and write
+the report into the dataset. Only position will reach the RNN during training;
+heading and kinematics exist for validation and controls. Today those commands
+are stubs that exit 3; the contract is [docs/cli/spec.md](docs/cli/spec.md).
+
+## Layout
+
+```
+configs/         declarative YAML; environments today, datasets, models, training and experiments later
+src/subiculum_rnn/
+  environments/  parametric geometry (triple-T, open arena, plus maze), content hashes, RatInABox adapter
+  store.py       the artifact store: resolution order, marker, layout, manifest scan
+  cli/           the command line entry point: groups, stub table, real commands
+tests/           unit tests for the store and the CLI
+docs/            reproduction steps, and per-feature spec, plan and tasks (docs/cli/)
+artifacts/       the default store: datasets, models, experiments (git-ignored, regenerable)
+labnotebook/     dated entries, `pixi run note`
 ```
 
 ## Replicability and Reproducibility
@@ -24,20 +95,17 @@ There is a complex history of these tertms and what they mean within different f
 - **Reproducibility**: obtaining consistent results using the same input data, computational methods, and conditions of analysis.
 
 
-Synthetic, and open source data results should be reproducible. Results using your own collected recording data should be replicable to within some stated percision. Given the stochastic nature of machine learning methods, from data cleaning to pipeline construction to training and validation, it can be daunting to provide 100% reproducibility, but it is a standard to strive for nonetheless. 
+Synthetic data (generated with the RatInABox python library<sup>3</sup>), and open source data results should be reproducible. Results using your own collected recording data should be replicable to within some stated percision. Given the stochastic nature of machine learning methods, from data cleaning to pipeline construction to training and validation, it can be daunting to provide near 100% reproducibility, but it is a standard to strive for nonetheless.
 
 To that end, this README provides all instructions needed to reproduce our synthetic data results. Instructions for reproducing results with open-source data and our own recorded data are provided in the project wiki.
 
 
-| Requirement | How it's met |
-|-------------|-------------|
-| **Exact software versions** | `pixi.lock` pins every Python package, and its transitive dependencies, to a specific version |
-| **Versioned data provenance** | Each synthetic dataset has a config.yaml with all generation parameters + an ID |
-| **Logged and versioned training runs** | Hydra configs are saved with each run and WandB logs every metric |
-| **Cross-platform** | `pixi.toml` targets `linux-64`, `osx-arm64` |
-
-## Pixi task command samples
-`pixi run env-plot triple_t --out figures/env.png && open figures/env.png`
+| Requirement                            | How it's met                                                                                                                                  |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Exact software versions**            | `pixi.lock` pins every Python package, and its transitive dependencies, to a specific version                                                 |
+| **Versioned data provenance**          | Each synthetic dataset has a manifest with all generation parameters, seeds, the environment geometry hash and an ID                          |
+| **Logged and versioned training runs** | Every dataset, model and experiment is a directory under `artifacts/` with a `manifest.yaml` recording config, seed, code commit and lockfile |
+| **Cross-platform**                     | `pixi.toml` targets `linux-64`, `osx-arm64`                                                                                                   |
 
 
 ## Citation
