@@ -8,7 +8,7 @@ version = "0.0.01"
 description = "Do axis-of-travel-like representations emerge in a vanilla RNN trained to predict future position?"
 readme = "README.md"
 requires-python = ">=3.12"
-authors = [{ name = "Kyle Shannon", email = "kyle@kmshannon.com" }]
+authors = [{ name = "Kyle Shannon", email = "kyle@kmshannon.com" }, { name = "Jiesen Zhang", email = "jiz147@ucsd.edu" }]
 # Runtime imports of the package itself. The full research environment
 # (PyTorch, RatInABox, plotting, ...) is pinned in pixi.toml / pixi.lock.
 dependencies = [
