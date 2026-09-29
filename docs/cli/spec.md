@@ -42,7 +42,7 @@ defined in code only when the command is implemented.
 | `env inspect <env> [--json]` | geometry summary, or the canonical spec as JSON | what is printed is exactly what is hashed, so configs can be diffed |
 | `agent list` | every behavioral profile with hash, headline stats, and how many datasets, models and experiments use it | agents are the unit of behavioral variation; know how much rests on each |
 | `agent inspect <agent> [--json]` | parameters, current and superseded hashes, and everything referencing each | trace a behavioral assumption to every result it touched |
-| `data list` | registered datasets with environment, agents, input hash, created | the registry is the database; listing finds the id to pass onward |
+| `data list` | registered datasets with environment, agents, input hash, created | the store is the database; listing finds the id to pass onward |
 | `data inspect <dataset> [--json]` | manifest, session and trial counts, split, validation status | confirm contents and validation before training on it |
 | `data generate --config <yaml> [--seed N] [--dry-run]` | build a synthetic dataset from environment, agents and seeds; reuse on hash match | the only way trajectories come to exist, so provenance is captured once |
 | `data validate <dataset> --reference <file> [--dry-run]` | compare the dataset's behavioral statistics with a reference statistics file; write the report into the dataset | behavior is validated on its own before it feeds training; the reference is aggregate numbers, so nothing from outside the store is needed |
@@ -83,8 +83,8 @@ the implementation, in that command's own PR.
 
 - Configs: declarative YAML under `configs/<kind>/<name>.yaml`, addressed by name, each
   with a content hash of its resolved form.
-- Store: a directory holding `store.yaml` (store version, created, hostname, repo commit at
-  creation) and the kind directories `datasets/`, `models/`, `experiments/`. `store init`
+- Store: a directory holding `store.yaml` (store version, created, hostname, tool
+  version) and the kind directories `datasets/`, `models/`, `experiments/`. `store init`
   creates it; writers create subdirectories on demand. Nothing else lives in a store.
 - Artifacts: `<store>/<kind>/<id>/manifest.yaml`, `id` equal to the directory name.
   Recordings, evaluations and analysis results live inside their model's directory. A
@@ -119,11 +119,13 @@ the implementation, in that command's own PR.
 
 ### Edge Cases
 
-- Store path without a marker, including an unmounted drive: "store not found at PATH; is the
-  drive mounted? run `store init`", exit 2. A marker newer than the tool: refuse, exit 2.
+- Store path without a marker: error naming the path and how it was chosen, exit 2. For a
+  path from the flag or the variable it asks whether the drive is mounted; for the default
+  it says how to point elsewhere; both say to run `store init`. A marker newer than the
+  tool: refuse, exit 2.
 - Unknown name or id: error naming it and listing what exists, exit 2. Same for a manifest
   id differing from its directory or a config that fails to resolve, naming the file and key.
-- Empty registry: "no <kind> registered under <path>", exit 0.
+- Nothing of a kind in the store: "no <kind> registered under <path>", exit 0.
 - RatInABox and PyTorch are imported inside the commands that need them; a missing one
   names the pixi environment to use.
 
@@ -141,7 +143,7 @@ the implementation, in that command's own PR.
 
 ## Out of Scope
 
-- Real behavioral data. It never enters the store, the registry or this tool. Its analysis
+- Real behavioral data. It never enters the store or this tool. Its analysis
   happens outside the repository; at most an aggregate statistics file reaches `data validate`
   by path, and the report records only that file's checksum.
 - Automatic calibration of agent configs from real statistics; the numbers are written by hand.
