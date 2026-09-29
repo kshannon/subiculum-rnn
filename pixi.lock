@@ -11220,12 +11220,12 @@ packages:
   timestamp: 1764984166760
 - pypi: ./
   name: subiculum-rnn
-  version: 0.0.1
-  sha256: 4dcccba9ccfb61e276fe779f172291f375ad756b4281a5e6dda9c10e66db9f41
+  version: 0.1.0
+  sha256: 3d62765628616bb9c4bfade95c61ba6679acd2104f2c7d0407a60cac2aaa03bd
   requires_dist:
   - numpy>=1.26
-  - pyyaml>=6
   - pydantic>=2.5
+  - pyyaml>=6
   - xarray>=2023.6
   - zarr>=3,<4
   requires_python: '>=3.12'
