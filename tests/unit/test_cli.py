@@ -15,7 +15,7 @@ ENV_NAMES = ["open_arena", "plus_maze", "triple_t", "triple_t_rot90"]
 KINDS = [("data", "datasets"), ("model", "models"), ("experiment", "experiments")]
 STUB_COMMANDS = [f"{group} {command}" for group, command, _ in STUBS]
 REAL = {"store init", "store inspect", "env list", "env inspect", "data list",
-        "model list", "experiment list"}
+        "model list", "experiment list", "notebook new"}
 
 
 def _commands(parser):
@@ -132,6 +132,13 @@ def test_every_stub_exits_3(name, capsys):
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "not implemented" in captured.err
+
+
+def test_notebook_new_writes_a_dated_notebook(tmp_path: Path, capsys):
+    assert main(["notebook", "new", "cli", "check", "--dir", str(tmp_path)]) == 0
+    written = Path(capsys.readouterr().out.strip())
+    assert written.parent == tmp_path and written.name.endswith("_cli-check.ipynb")
+    assert written.is_file()
 
 
 def test_the_implemented_commands_are_the_ones_the_spec_promises():
