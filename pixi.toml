@@ -22,6 +22,10 @@ sim-smoke = "python scripts/smoke_agent.py"
 test     = "python -m pytest"
 test-cov = "python -m pytest --cov=subiculum_rnn --cov-report=term-missing"
 
+# Jupyter notebooks: create one from the template; strip outputs on commit (once per clone)
+notebook           = "subiculum-rnn notebook new"
+nbstripout-install = "nbstripout --install --attributes .gitattributes"
+
 
 ###################### ======== DEPENDENCIES ======== ######################
 [dependencies]
@@ -64,6 +68,11 @@ pytest-xdist = "*"
 jupyter      = "*"
 ipython      = "*"
 ipytest      = "*"
+nbformat     = "*"
+nbstripout   = "*"
+
+[feature.dev.pypi-dependencies]
+scienceplots = ">=2"
 
 # ---- cuda feature: GPU builds, Linux clusters etc. ----
 [feature.cuda]
