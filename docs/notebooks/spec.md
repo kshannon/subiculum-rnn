@@ -15,10 +15,11 @@ artifact: nothing here touches the store or manifests.
 
 ### Command
 
-- `subiculum-rnn notebook new <name> [--title TEXT] [--dir DIR]`: create the notebook and
-  print its path. `<name>` is slugified the way `pixi run note` slugifies lab notebook
+- `subiculum-rnn notebook new <name> [--title TEXT] [--author TEXT] [--dir DIR]`: create
+  the notebook and print its path. `<name>` is slugified the way `pixi run note` slugifies lab notebook
   names (lowercase, runs of non-alphanumerics become one dash). `--title` defaults to the
-  name with dashes turned into spaces. `--dir` defaults to `notebooks/` in the checkout.
+  name with dashes turned into spaces. `--author` defaults to git's `user.name`. `--dir`
+  defaults to `notebooks/` in the checkout.
 - `pixi run notebook <name>` is the same command as a pixi task.
 - Refuses to overwrite: an existing file at the target path is an error naming it, exit 2.
   An empty slug is an error, exit 2.
@@ -27,9 +28,8 @@ artifact: nothing here touches the store or manifests.
 
 ### Template contents, in cell order
 
-1. Markdown header: `# <date> <title>`, then name, created timestamp, and a Purpose line
-   to fill in; a one-line reminder of non-negotiable 1 (nothing that encodes axis of
-   travel reaches training inputs) with a link to AGENTS.md; a link to the relevant spec.
+1. Markdown header: `# <date> <title>`, then author, notebook name, created timestamp,
+   and a Purpose line to fill in.
 2. Code, setup: `%load_ext autoreload`, `%autoreload 2`, `%matplotlib inline`,
    `%config InlineBackend.figure_format = "retina"`; imports: `Path`, `numpy as np`,
    `pandas as pd`, `matplotlib.pyplot as plt`, `scienceplots` (registers the styles),
@@ -42,14 +42,16 @@ artifact: nothing here touches the store or manifests.
    a `FIGURES = Path("figures")` and a commented `fig.savefig(FIGURES / ..., dpi=300)`.
 4. Markdown section headers with a one-line hint each: Data, Analysis, Figures, Notes.
 
-Placeholders in the template are `{{DATE}}`, `{{TITLE}}`, `{{NAME}}`, `{{CREATED}}`,
-replaced in every cell's source. Everything else is copied verbatim, outputs included,
-so the template ships with the sample figure already rendered.
+Placeholders in the template are `{{DATE}}`, `{{TITLE}}`, `{{NAME}}`, `{{AUTHOR}}` and
+`{{CREATED}}`, replaced in every cell's source. Everything else is copied verbatim. The
+template is committed without outputs like every notebook; run its cells once after opening.
 
 ### Behavior
 
-- Generated notebooks are committed like any other file; clear outputs before committing
-  large ones. Exploratory notebooks are disposable; report notebooks cite artifact ids.
+- Outputs never enter git. `nbstripout` is installed as a git clean filter, once per clone
+  with `pixi run nbstripout-install`; `.gitattributes` marks `*.ipynb` for it. The working
+  copy keeps its outputs; only the committed file is stripped. A finished notebook is
+  shared as an export (PDF or HTML), not as saved outputs.
 - LaTeX is not required: `no-latex` is in the default style list. Remove it in a notebook
   when a TeX installation is present and publication typography is wanted.
 
@@ -58,7 +60,7 @@ so the template ships with the sample figure already rendered.
 - `src/subiculum_rnn/notebooks.py` holds one function, `new_notebook(name, title, directory,
   today)`, reading and writing through `nbformat`; `cli/notebook.py` is the group module.
 - Dependencies, dev feature only: `nbformat` (already present through jupyter, declared
-  explicitly) and `scienceplots` from PyPI. `nbformat` is imported inside the function so
+  explicitly), `nbstripout`, and `scienceplots` from PyPI. `nbformat` is imported inside the function so
   the CLI's import cost does not change.
 - SciencePlots is credited in the README references with its Zenodo citation
   (John D. Garrett, garrettj403/SciencePlots, doi 10.5281/zenodo.4106649) and in the PR.
@@ -67,8 +69,9 @@ so the template ships with the sample figure already rendered.
 
 ## Out of Scope
 
-- Executing notebooks, converting them to reports, or parameterizing them (papermill).
-- Stripping outputs on commit (nbstripout); revisit when notebooks accumulate.
+- Executing notebooks or parameterizing them (papermill).
+- Exporting a finished notebook to PDF or HTML: its own small feature. PDF needs pandoc
+  plus LaTeX or a headless browser; HTML needs nothing extra.
 - Subfolders under `notebooks/`; `--dir` covers other locations.
 - Registering notebooks in the store or linking them to artifacts.
 - A LaTeX installation or the `ieee` and `nature` styles.
