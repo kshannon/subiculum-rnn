@@ -18,6 +18,7 @@ cd subiculum-rnn
 
 # 3. Install environment, dependencies and the project package (editable)
 pixi install
+pixi run nbstripout-install   # once per clone: notebooks are committed without outputs
 
 # 4. Check it works
 pixi run test
@@ -39,7 +40,7 @@ group and command has `--help` with what it reads, what it writes and an
 example. The contract is [docs/cli/spec.md](docs/cli/spec.md).
 
 ```bash
-pixi run subiculum-rnn --help                      # the groups: store, env, agent, data, model, analysis, experiment
+pixi run subiculum-rnn --help                      # the groups: store, env, agent, data, model, analysis, experiment, notebook
 pixi run subiculum-rnn store inspect               # where artifacts go, marker, counts
 pixi run subiculum-rnn env list                    # environment configs and geometry hashes
 pixi run subiculum-rnn env inspect triple_t --json # one environment; the JSON is exactly what gets hashed
@@ -47,6 +48,7 @@ pixi run subiculum-rnn data list                   # registered datasets in the 
 pixi run subiculum-rnn model list                  # registered models (model animals)
 pixi run subiculum-rnn experiment list             # registered experiments (populations)
 pixi run note                                      # new lab notebook entry
+pixi run notebook <name>                           # new Jupyter notebook from the template, named by date and slug
 ```
 
 Artifacts (datasets, models, experiments) are written only by this command,
@@ -56,6 +58,10 @@ directory with a `store.yaml` marker; commands refuse anything else, which
 catches an unplugged drive. Each artifact carries a manifest recording the
 configs and hashes, seeds, git commit and lockfile that produced it, so it is
 regenerable and never modified in place.
+
+New notebooks come from `templates/notebook.ipynb` and draw their figures in
+the SciencePlots<sup>4</sup> style; git stores every notebook without its
+outputs, so `pixi run nbstripout-install` belongs in every clone.
 
 ## How synthetic data will be generated
 
@@ -119,3 +125,4 @@ If you use this code, please cite the relevant papers (see project wiki for full
 1. National Academies of Sciences, Engineering, and Medicine. 2019. Reproducibility and Replicability in Science. Washington, DC: The National Academies Press. https://doi.org/10.17226/25303.
 2. https://www.acm.org/publications/policies/artifact-review-and-badging-current
 3. Tom M George, Mehul Rastogi, William de Cothi, Claudia Clopath, Kimberly Stachenfeld, Caswell Barry. "RatInABox, a toolkit for modelling locomotion and neuronal activity in continuous environments" (2024), eLife, https://doi.org/10.7554/eLife.85274 .
+4. John D. Garrett. "garrettj403/SciencePlots", Zenodo, https://doi.org/10.5281/zenodo.4106649 .

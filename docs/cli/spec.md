@@ -57,6 +57,7 @@ defined in code only when the command is implemented.
 | `experiment inspect <experiment> [--json]` | members with status, results | a population's outcome including its failures |
 | `experiment run --config <yaml> [--dry-run]` | train a population from one config under one manifest, adopting members that already exist | vary one or two factors at a time under one id |
 | `experiment reproduce <experiment> [--dry-run]` | verify commit, lockfile and hashes; re-run into a linked experiment; compare | reproducibility is a command, not a hope |
+| `notebook new <name> [--title TEXT] [--author TEXT] [--dir DIR]` | create a Jupyter notebook from `templates/notebook.ipynb` as `notebooks/<date>_<slug>.ipynb` | a notebook never starts by copy-pasting; see docs/notebooks/spec.md |
 
 ### Global options and shared flags
 
@@ -74,10 +75,11 @@ defined in code only when the command is implemented.
 ### Status
 
 PR 1 implements `store init`, `store inspect`, `env list`, `env inspect`, `data list`,
-`model list` and `experiment list`. Every other command is a bare stub: its name and a
-one-line help appear in the help tree, and running it prints "not implemented" with a
-pointer to this spec on stderr and exits 3. A stub takes no arguments; they arrive with
-the implementation, in that command's own PR.
+`model list` and `experiment list`. `notebook new` is implemented (notebook template
+PR). Every other command is a bare stub: its name and a one-line help appear in the help
+tree, and running it prints "not implemented" with a pointer to this spec on stderr and
+exits 3. A stub takes no arguments; they arrive with the implementation, in that
+command's own PR.
 
 ### Data Model
 
