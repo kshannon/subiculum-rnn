@@ -6,7 +6,7 @@ import argparse
 
 from .. import __version__
 from ..store import ENV_VAR, StoreError
-from . import artifacts, env, store
+from . import artifacts, env, notebook, store
 from ._output import fail, not_implemented
 
 GROUPS = {
@@ -17,6 +17,7 @@ GROUPS = {
     "model": "trained models (model animals)",
     "analysis": "hidden states and axis-of-travel analysis",
     "experiment": "experiments: populations of models",
+    "notebook": "jupyter notebooks from the template",
 }
 
 STUBS = (
@@ -59,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     artifacts.register(commands["data"], "datasets")
     artifacts.register(commands["model"], "models")
     artifacts.register(commands["experiment"], "experiments")
+    notebook.register(commands["notebook"])
     for group_name, command, summary in STUBS:
         p = commands[group_name].add_parser(command, help=summary)
         p.set_defaults(func=not_implemented, name=f"{group_name} {command}")
