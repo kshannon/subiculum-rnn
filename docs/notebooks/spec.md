@@ -52,6 +52,8 @@ template is committed without outputs like every notebook; run its cells once af
   with `pixi run nbstripout-install`; `.gitattributes` marks `*.ipynb` for it. The working
   copy keeps its outputs; only the committed file is stripped. A finished notebook is
   shared as an export (PDF or HTML), not as saved outputs.
+- Notebooks are small and many: one question per notebook, rather than one large one.
+  Cheap creation is what makes that the easy path.
 - LaTeX is not required: `no-latex` is in the default style list. Remove it in a notebook
   when a TeX installation is present and publication typography is wanted.
 
@@ -64,8 +66,10 @@ template is committed without outputs like every notebook; run its cells once af
   the CLI's import cost does not change.
 - SciencePlots is credited in the README references with its Zenodo citation
   (John D. Garrett, garrettj403/SciencePlots, doi 10.5281/zenodo.4106649) and in the PR.
-- One test: the generated file validates with `nbformat`, its first cell contains the date
-  and title, and a second call with the same name exits 2. Strike it if not wanted.
+- Two tests. The generated file validates with `nbformat`, its first cell contains the
+  date, title and author, and a second call with the same name exits 2. And in a temporary
+  git repo carrying the project's attributes line and the install task's command, a
+  notebook committed with outputs is stored without them.
 
 ## Out of Scope
 
