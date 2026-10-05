@@ -18,13 +18,16 @@ def _artifact(store: Store, kind: str, name: str, declared_id: str) -> None:
     (d / "manifest.yaml").write_text(f"id: {declared_id}\n")
 
 
-def test_resolution_order_is_flag_then_env_then_default(tmp_path: Path):
-    flag, env = tmp_path / "flag", tmp_path / "env"
-    chosen = resolve_store(str(flag), env={ENV_VAR: str(env)})
+def test_resolution_order_is_flag_then_env_then_local_then_default(tmp_path: Path):
+    flag, env, local = tmp_path / "flag", tmp_path / "env", tmp_path / "local.yaml"
+    local.write_text(f"STORE: {tmp_path / 'from-file'}\n")
+    chosen = resolve_store(str(flag), env={ENV_VAR: str(env)}, local_file=local)
     assert (chosen.root, chosen.source) == (flag, "flag")
-    chosen = resolve_store(None, env={ENV_VAR: str(env)})
+    chosen = resolve_store(None, env={ENV_VAR: str(env)}, local_file=local)
     assert (chosen.root, chosen.source) == (env, "env")
-    chosen = resolve_store(None, env={})
+    chosen = resolve_store(None, env={}, local_file=local)
+    assert (chosen.root, chosen.source) == (tmp_path / "from-file", "local")
+    chosen = resolve_store(None, env={}, local_file=tmp_path / "absent.yaml")
     assert (chosen.root, chosen.source) == (repo_root() / "artifacts", "default")
 
 

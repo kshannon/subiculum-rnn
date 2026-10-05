@@ -47,7 +47,8 @@ module per group as the science lands, not ahead of it.
 - One list implementation serves the three artifact kinds, and one manifest scan
   in the store serves both listing and `store inspect`.
 - Two locations, not one: configs from the checkout, artifacts from a store
-  chosen by flag, environment variable, or default. A store is marked, and
+  chosen by flag, environment variable, the machine-local `configs/local.yaml`,
+  or default. A store is marked, and
   commands refuse unmarked directories, so an unmounted drive or a typo cannot
   produce a stray tree.
 - Ids are derived from directories, never from an index file. A uuid and the

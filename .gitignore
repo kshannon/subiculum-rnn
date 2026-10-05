@@ -63,6 +63,9 @@ data/**
 *.zarr/
 .dandi/
 
+# ============ Machine-local paths (see configs/local.example.yaml) ============
+configs/local.yaml
+
 # ============ Artifacts: datasets, models, experiments (regenerable) ============
 artifacts/**
 !artifacts/**/

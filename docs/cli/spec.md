@@ -62,9 +62,10 @@ defined in code only when the command is implemented.
 ### Global options and shared flags
 
 - `--store DIR` selects the artifact store for one invocation. Without it the environment
-  variable `SUBICULUM_RNN_STORE` is used; without that, `artifacts/` inside the checkout. The
-  variable is the per-machine setting, so a laptop and a drive each declare where their store is
-  and nothing machine-specific enters the repo.
+  variable `SUBICULUM_RNN_STORE` is used; without that, the `STORE` key in
+  `configs/local.yaml`; without that, `artifacts/` inside the checkout. The local file is
+  the per-machine setting: git-ignored, never hashed, copied from `configs/local.example.yaml`,
+  and read from the checkout so a notebook kernel sees it however it was launched.
 - Configs always come from the checkout containing the package, so commands run from any
   directory.
 - `--version` prints the package version, the same value every manifest records.

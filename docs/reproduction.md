@@ -24,8 +24,9 @@ package in editable mode, which provides the `subiculum-rnn` command.
     pixi run subiculum-rnn experiment list         # registered experiments
 
 `python -m subiculum_rnn` is equivalent to `subiculum-rnn`. The store is
-chosen by `--store DIR`, else the `SUBICULUM_RNN_STORE` variable, else
-`artifacts/` in the checkout; configs always come from the checkout. Commands
+chosen by `--store DIR`, else the `SUBICULUM_RNN_STORE` variable, else the
+`STORE` key in `configs/local.yaml`, else `artifacts/` in the checkout;
+configs always come from the checkout. Commands
 not yet implemented exit 3; the full contract is [cli/spec.md](cli/spec.md).
 
 ## Versioning layers

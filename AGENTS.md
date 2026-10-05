@@ -64,7 +64,8 @@ settings and dotfiles are never changed by project work.
 - `docs/research_plan.md` and `docs/data_dictionary.md`: phases, milestones,
   stored fields; arrive with the docs PR.
 - `configs/`: declarative YAML; environments today, agents, datasets, models,
-  training and experiments as they land.
+  training and experiments as they land. `configs/local.yaml` is the one
+  machine-local file: paths only, git-ignored, never hashed.
 - `src/subiculum_rnn/`: environments, store and cli today; behavior, datasets,
   models and analysis as they land.
 - `tmp/planning/`: the full project overview and working notes, never committed.

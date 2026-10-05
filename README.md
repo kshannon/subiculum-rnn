@@ -25,10 +25,11 @@ pixi run test
 pixi run subiculum-rnn env list
 
 # 5. Choose where artifacts live: artifacts/ in this checkout by default,
-#    or a directory elsewhere, for example on an external drive
-pixi run subiculum-rnn store init                       # default location (gitignored)
-pixi run subiculum-rnn store init /Volumes/haruhi/phd/kshannon/subiculum-rnn-data # or a custom location
-export SUBICULUM_RNN_STORE=/Volumes/haruhi/phd/kshannon/subiculum-rnn-data  # per machine, e.g. in your shell config
+#    or a directory elsewhere, for example on an external drive. Machine-local
+#    paths go in configs/local.yaml (git-ignored); copy the example and edit it,
+#    see "Machine-local paths" below.
+cp configs/local.example.yaml configs/local.yaml
+pixi run subiculum-rnn store init                       # creates the store named in local.yaml
 pixi run subiculum-rnn store inspect
 ```
 
@@ -53,7 +54,8 @@ pixi run notebook <name>                           # new Jupyter notebook from t
 
 Artifacts (datasets, models, experiments) are written only by this command,
 into a store outside git: `--store DIR` for one run, the `SUBICULUM_RNN_STORE`
-variable per machine, or `artifacts/` in the checkout by default. A store is a
+variable, the `STORE` key in `configs/local.yaml`, or `artifacts/` in the
+checkout by default. A store is a
 directory with a `store.yaml` marker; commands refuse anything else, which
 catches an unplugged drive. Each artifact carries a manifest recording the
 configs and hashes, seeds, git commit and lockfile that produced it, so it is
@@ -62,6 +64,17 @@ regenerable and never modified in place.
 New notebooks come from `templates/notebook.ipynb` and draw their figures in
 the SciencePlots<sup>4</sup> style; git stores every notebook without its
 outputs, so `pixi run nbstripout-install` belongs in every clone.
+
+## Machine-local paths
+
+`configs/local.yaml` holds the paths that depend on the machine, nothing else:
+`STORE` for the artifact store, `RAW_DATA` for the lab's recordings and
+`TRANSFORMED_RAW_DATA` for the tables made from them. It is git-ignored; copy
+`configs/local.example.yaml` and edit. Every such path is resolved in one order:
+the command-line flag, then the environment variable (`SUBICULUM_RNN_STORE`,
+`SUBICULUM_RNN_RAW`, `SUBICULUM_RNN_TRANSFORMED_RAW`), then this file, then the
+built-in default. Nothing in it is ever hashed into a manifest, so two machines
+with different drives produce identical artifacts.
 
 ## How synthetic data will be generated
 

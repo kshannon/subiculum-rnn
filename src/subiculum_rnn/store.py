@@ -2,7 +2,6 @@
 The artifact store: how it is found, its marker, its layout and the artifacts inside it.
 """
 
-import os
 import socket
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -12,14 +11,15 @@ from pathlib import Path
 import yaml
 
 from . import __version__
-from .paths import repo_root
+from .paths import LOCAL_CONFIG, repo_root, resolve_path
 
 ENV_VAR = "SUBICULUM_RNN_STORE"
 MARKER = "store.yaml"
 MANIFEST = "manifest.yaml"
 STORE_VERSION = 1
 KINDS = ("datasets", "models", "experiments")
-CHOSEN_BY = {"flag": "--store", "env": f"${ENV_VAR}", "argument": "the argument"}
+CHOSEN_BY = {"flag": "--store", "env": f"${ENV_VAR}", "local": LOCAL_CONFIG,
+             "argument": "the argument"}
 
 
 class StoreError(Exception):
@@ -99,8 +99,9 @@ class Store:
 
     def _missing(self) -> str:
         if self.source == "default":
-            return (f"no store at {self.root} (the default location; pass --store DIR "
-                    f"or set {ENV_VAR} to use another); run `store init` to create it")
+            return (f"no store at {self.root} (the default location; pass --store DIR, "
+                    f"set {ENV_VAR}, or add STORE to {LOCAL_CONFIG}); "
+                    f"run `store init` to create it")
         return (f"store not found at {self.root} (from {CHOSEN_BY[self.source]}); "
                 f"is the drive mounted? run `store init`")
 
@@ -114,16 +115,16 @@ class Store:
         return {kind: len(_scan(self.kind_dir(kind))[0]) for kind in KINDS}
 
 
-def resolve_store(flag: str | None, env: Mapping[str, str] | None = None) -> Store:
-    env = os.environ if env is None else env
-    if flag:
-        return Store(Path(flag).expanduser(), "flag")
-    if env.get(ENV_VAR):
-        return Store(Path(env[ENV_VAR]).expanduser(), "env")
-    return Store(repo_root() / "artifacts", "default")
+def resolve_store(flag: str | None, env: Mapping[str, str] | None = None,
+                  local_file: Path | None = None) -> Store:
+    root, source = resolve_path(flag, env_var=ENV_VAR, key="STORE",
+                                default=repo_root() / "artifacts", env=env,
+                                local_file=local_file)
+    return Store(root, source)
 
 
-def open_store(flag: str | None, env: Mapping[str, str] | None = None) -> Store:
-    store = resolve_store(flag, env)
+def open_store(flag: str | None, env: Mapping[str, str] | None = None,
+               local_file: Path | None = None) -> Store:
+    store = resolve_store(flag, env, local_file)
     store.read_marker()
     return store
